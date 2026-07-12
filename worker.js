@@ -45,6 +45,7 @@ WHAT ${DEV} CAN BUILD FOR OTHERS (frame as capability, in ABSOLUTE terms, never 
 - Intelligence tools, calculators and internal software.
 - Market and data visualization, including 3D.
 - Content and video engines like the studio.
+- Smart websites and personal branding pages: not just a nice page, but one with real tools built in, a valuation checker, calculators, or an assistant like me, so the agent adds genuine value to their own clients instead of just looking good. This demo you are talking to is one of them.
 - Conversational and voice systems like you.
 - Custom internal tools, CRMs and dashboards.
 
@@ -117,7 +118,7 @@ function extractJson(raw) {
 // strip em/en dashes the model slips in (they show on screen) -> commas
 function clean(s) { return String(s || "").trim().replace(/\s*[—–]\s*/g, ", "); }
 function normalize(o) {
-  const ok = ["research","tools","dataviz","content","conversational","custom","none"];
+  const ok = ["research","tools","dataviz","content","web","conversational","custom","none"];
   return {
     reply: clean(o.reply) || "Sorry, say that again?",
     highlight: ok.includes(o.highlight) ? o.highlight : "none",
