@@ -329,8 +329,8 @@ const CONFIG = {
   useElevenLabs: true,
 
   // Loudness boost. Mobile plays Web Audio at unity gain, which is soft.
-  // Raise if still quiet (2.5, 3), lower if it distorts.
-  voiceVolume: 2.4,
+  // A limiter keeps it from clipping, so this can go high. Lower if it ever distorts.
+  voiceVolume: 3.2,
 };
 
 /* Mia's opening line to the room (spoken instantly, no model needed). */
@@ -589,18 +589,22 @@ async function elevenSpeak(text,my,done){
   const buf=await r.arrayBuffer();
   if(my!==speakToken) return;                       // superseded (barge-in / newer reply)
   if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
-  if(!ttsAudio){ ttsAudio=new Audio(); }
+  if(!ttsAudio){ ttsAudio=new Audio(); ttsAudio.volume=1; }
   const url=URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'}));
   ttsAudio.src=url;
   try{
-    if(audioCtx && !ttsSource){                      // wire graph once: source -> gain -> compressor -> out (+ analyser tap)
+    if(audioCtx && !ttsSource){                      // wire graph once: source -> gain -> limiter -> out (+ analyser tap)
       ttsSource=audioCtx.createMediaElementSource(ttsAudio);
       ttsAnalyser=audioCtx.createAnalyser(); ttsAnalyser.fftSize=64;
       ttsData=new Uint8Array(ttsAnalyser.frequencyBinCount);
       ttsGain=audioCtx.createGain(); ttsGain.gain.value=CONFIG.voiceVolume||1;
-      const comp=audioCtx.createDynamicsCompressor();  // tame peaks so the boost doesn't clip
+      // brickwall LIMITER: clamps only the loudest peaks so the boost never clips,
+      // WITHOUT ducking the body of the speech (that was the soft/uneven bug).
+      const lim=audioCtx.createDynamicsCompressor();
+      lim.threshold.value=-1.5; lim.knee.value=0; lim.ratio.value=20;
+      lim.attack.value=0.002; lim.release.value=0.08;
       ttsSource.connect(ttsAnalyser);                  // tap for the voiceprint
-      ttsSource.connect(ttsGain); ttsGain.connect(comp); comp.connect(audioCtx.destination);
+      ttsSource.connect(ttsGain); ttsGain.connect(lim); lim.connect(audioCtx.destination);
     }
     if(audioCtx && audioCtx.state==='suspended') await audioCtx.resume();
   }catch(e){}
