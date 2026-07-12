@@ -333,7 +333,7 @@ const CONFIG = {
 
   // Loudness boost. Mobile plays Web Audio at unity gain, which is soft.
   // A limiter keeps it from clipping, so this can go high. Lower if it ever distorts.
-  voiceVolume: 3.2,
+  voiceVolume: 3.8,
 };
 
 /* Mia's opening line to the room (spoken instantly, no model needed). */
@@ -405,15 +405,27 @@ function highlight(k){
   CAP_ORDER.forEach(x=>capNodes[x].classList.toggle('on', x===k));
 }
 
-/* ---- chips ---- */
+/* ---- chips: each plays a PRE-RECORDED Christine clip (free, instant, no API) ---- */
 (function buildChips(){
   const wrap=el('chips');
-  CHIPS.forEach(c=>{
+  CHIPS.forEach((c,i)=>{
+    c.audio="audio/p"+i+".mp3";
     const b=document.createElement('button'); b.className='chip'; b.textContent=c.q;
-    b.addEventListener('click',()=>{ if(!busy&&started) ask(c.q); });
+    b.addEventListener('click',()=>playPill(c));
     wrap.appendChild(b);
   });
 })();
+
+// A pill: show its scripted answer and play its pre-recorded clip. No Claude, no ElevenLabs.
+function playPill(pill){
+  if(busy||!started) return; busy=true;
+  document.querySelectorAll('.chip').forEach(x=>x.disabled=true);
+  pushHistory('You',pill.q); convo.push({role:'user',content:pill.q});
+  showNow('Mia',pill.a); pushHistory('Mia',pill.a);
+  convo.push({role:'assistant',content:pill.a});
+  if(pill.h && CAPS[pill.h]) highlight(pill.h);
+  speakClip(pill.audio, pill.a, ()=>{ busy=false; document.querySelectorAll('.chip').forEach(x=>x.disabled=false); });
+}
 
 /* ---- status + timecode ---- */
 function setState(label,live){ stateLabel.textContent=label; stateEl.dataset.live=live?'1':'0'; }
@@ -573,6 +585,7 @@ speechSynthesis.onvoiceschanged=pickVoice; pickVoice();
 
 let curUtter=null, ttsAudio=null, ttsSource=null, ttsAnalyser=null, ttsData=null, ttsOn=false, speakToken=0, ttsGain=null;
 
+// LIVE voice: generate Christine speech from arbitrary text (free-form spoken questions).
 function speak(text,done){
   stopSpeaking();
   const my=++speakToken;
@@ -583,35 +596,46 @@ function speak(text,done){
     browserSpeak(text,done);
   }
 }
-
-// Christine's voice via the Worker; drives the voiceprint from the real audio.
 async function elevenSpeak(text,my,done){
   const r=await fetch(CONFIG.workerUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
   if(!r.ok) throw new Error('tts '+r.status);
   if(!/audio/i.test(r.headers.get('content-type')||'')) throw new Error('not audio');
   const buf=await r.arrayBuffer();
-  if(my!==speakToken) return;                       // superseded (barge-in / newer reply)
+  if(my!==speakToken) return;
+  await voicePlay(URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'})), my, done);
+}
+
+// PRE-RECORDED voice: play a stored Christine clip (greeting + pills). Free, instant, consistent.
+// Falls back to live TTS of the text if the clip can't load.
+function speakClip(src, fallbackText, done){
+  stopSpeaking();
+  const my=++speakToken;
+  mode='speaking'; setState('Speaking',true); energy=0.6;
+  voicePlay(src, my, done).catch(e=>{ if(my===speakToken){ console.warn('clip failed, using live voice',e); speak(fallbackText||'', done); } });
+}
+
+// low-level player: routes any audio URL (blob or local file) through the loudness graph + voiceprint.
+async function voicePlay(src, my, done){
+  if(my!==speakToken) return;                        // superseded (barge-in / newer reply)
   if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
   if(!ttsAudio){ ttsAudio=new Audio(); ttsAudio.volume=1; }
-  const url=URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'}));
-  ttsAudio.src=url;
+  ttsAudio.src=src;
   try{
     if(audioCtx && !ttsSource){                      // wire graph once: source -> gain -> limiter -> out (+ analyser tap)
       ttsSource=audioCtx.createMediaElementSource(ttsAudio);
       ttsAnalyser=audioCtx.createAnalyser(); ttsAnalyser.fftSize=64;
       ttsData=new Uint8Array(ttsAnalyser.frequencyBinCount);
       ttsGain=audioCtx.createGain(); ttsGain.gain.value=CONFIG.voiceVolume||1;
-      // brickwall LIMITER: clamps only the loudest peaks so the boost never clips,
-      // WITHOUT ducking the body of the speech (that was the soft/uneven bug).
+      // brickwall LIMITER: loud + even without clipping.
       const lim=audioCtx.createDynamicsCompressor();
-      lim.threshold.value=-1.5; lim.knee.value=0; lim.ratio.value=20;
+      lim.threshold.value=-3; lim.knee.value=0; lim.ratio.value=20;
       lim.attack.value=0.002; lim.release.value=0.08;
       ttsSource.connect(ttsAnalyser);                  // tap for the voiceprint
       ttsSource.connect(ttsGain); ttsGain.connect(lim); lim.connect(audioCtx.destination);
     }
     if(audioCtx && audioCtx.state==='suspended') await audioCtx.resume();
   }catch(e){}
-  const finish=()=>{ if(my===speakToken){ ttsOn=false; mode='idle'; setState('Ready',false); done&&done(); } try{URL.revokeObjectURL(url);}catch(e){} };
+  const finish=()=>{ if(my===speakToken){ ttsOn=false; mode='idle'; setState('Ready',false); done&&done(); } if(src&&src.indexOf('blob:')===0){ try{URL.revokeObjectURL(src);}catch(e){} } };
   ttsAudio.onended=finish; ttsAudio.onerror=finish;
   ttsOn=true; pumpTts();
   await ttsAudio.play();
@@ -693,7 +717,7 @@ el('begin').addEventListener('click',async()=>{
   showNow('Mia',OPENING); highlight('conversational');
   // resume audio context on gesture
   if(audioCtx&&audioCtx.state==='suspended') audioCtx.resume();
-  speak(OPENING);
+  speakClip('audio/greeting.mp3', OPENING);   // pre-recorded greeting (free, instant)
 });
 
 /* browser support note */
