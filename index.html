@@ -609,8 +609,9 @@ el('begin').addEventListener('click',async()=>{
   el('veil').classList.add('gone');
   started=true; t0=performance.now();
   await initMic();
-  // speak the opening line directly (instant, reliable, no model call)
-  convo.push({role:'assistant',content:OPENING});
+  // speak the opening line directly (instant, reliable, no model call).
+  // NOTE: do NOT push it into `convo` — the API rejects a history that starts
+  // with an assistant turn, which broke the first pill/question.
   showNow('Mia',OPENING); highlight('conversational');
   // resume audio context on gesture
   if(audioCtx&&audioCtx.state==='suspended') audioCtx.resume();
