@@ -93,6 +93,7 @@ export default {
         body: JSON.stringify({
           model: MODEL,
           max_tokens: 200,
+          thinking: { type: "disabled" },   // short spoken replies: faster, cheaper, no stray thinking blocks
           // Knowledge Pack is stable, so cache it: re-billed at ~10% on later turns.
           system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
           messages,
@@ -103,7 +104,8 @@ export default {
         console.error("anthropic error", data);
         return json({ reply: "My brain hit an error just now. Give me another go.", highlight: "none" }, 200);
       }
-      const raw = (data.content && data.content[0] && data.content[0].text || "").trim();
+      const tb = (data.content || []).find(b => b.type === "text");   // grab the text, skip any thinking block
+      const raw = ((tb && tb.text) || "").trim();
       return json(toReply(raw), 200);
     } catch (e) {
       console.error(e);

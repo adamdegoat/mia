@@ -658,9 +658,10 @@ async function ask(text){
         body:JSON.stringify({messages:convo}),signal:ctrl.signal});
       clearTimeout(to);
       const j=await r.json();
-      // Use the live reply, but keep the panel PREDICTABLE: pills always light
-      // their fixed card; only free-form spoken questions follow the model's pick.
-      if(j&&j.reply){ reply=j.reply; if(!hit && j.highlight && CAPS[j.highlight]) hl=j.highlight; }
+      // Ignore the worker's error/empty sentinels and keep our scripted answer,
+      // so a pill (or any question) never ends up speaking "say that again".
+      const bad=!j||!j.reply||/say that again|lost my connection|brain hit an error/i.test(j.reply);
+      if(!bad){ reply=j.reply; if(!hit && j.highlight && CAPS[j.highlight]) hl=j.highlight; }
     }catch(e){ console.warn('live answer failed, using scripted fallback',e); }  // keep fallback
   }else{
     await wait(650+Math.random()*500);               // offline demo: feel of thinking
