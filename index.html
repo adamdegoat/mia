@@ -231,20 +231,23 @@ footer{
 
 /* ---------- responsive ---------- */
 @media (max-width:860px){
-  .app{padding:16px;grid-template-rows:auto 1fr auto}
-  main{display:flex;flex-direction:column;gap:16px;overflow-y:auto}
-  .stage{display:block;overflow:visible;flex:0 0 auto;min-height:auto}
-  .convo{display:block;overflow:visible;flex:none;padding-top:0}
-  .wave{height:104px}
+  /* Mobile-first reorder: answer + pills + talk are the core; the capability
+     panel drops to the bottom (secondary on a phone). Whole page scrolls. */
+  .app{padding:16px 16px 24px;height:auto;min-height:100dvh;display:flex;flex-direction:column}
+  header{order:0}
+  main{display:contents}                 /* stage + panel become page-level blocks so we can reorder */
+  .stage{order:1;display:block;overflow:visible;min-height:auto}
+  footer{order:2;margin-top:18px;padding-top:16px;gap:12px;flex-wrap:wrap}
+  .panel{order:3;margin-top:22px;border-left:0;border-top:1px solid var(--line);padding-left:0;padding-top:16px}
+  .convo{display:block;overflow:visible;padding-top:0}
+  .wave{height:58px}                     /* small signal, not a big empty band */
   .now{font-size:clamp(18px,5vw,22px);line-height:1.34;max-width:100%;width:100%;margin-top:12px}
   .history{display:none}
-  .panel{border-left:0;border-top:1px solid var(--line);padding-left:0;padding-top:16px;flex:0 0 auto}
   .cap{padding-left:14px}
-  footer{gap:12px;padding-top:14px}
-  .chips{margin-left:0;width:100%;overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px;
-    -webkit-overflow-scrolling:touch}
-  .chip{flex:0 0 auto}
+  .ptt{order:1;flex:1 1 auto;justify-content:center}
   .hint{display:none}
+  .chips{order:2;margin-left:0;width:100%;flex-wrap:wrap}   /* ALL pills visible, no hidden sideways scroll */
+  .chip{flex:0 0 auto}
   .status .tc{display:none}
 }
 @media (max-width:560px){
