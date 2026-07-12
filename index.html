@@ -233,12 +233,12 @@ footer{
 @media (max-width:860px){
   .app{padding:16px;grid-template-rows:auto 1fr auto}
   main{display:flex;flex-direction:column;gap:16px;overflow-y:auto}
-  .stage{display:block;overflow:visible}
+  .stage{display:block;overflow:visible;flex:0 0 auto;min-height:auto}
   .convo{display:block;overflow:visible;flex:none;padding-top:0}
   .wave{height:104px}
   .now{font-size:clamp(18px,5vw,22px);line-height:1.34;max-width:100%;width:100%;margin-top:12px}
   .history{display:none}
-  .panel{border-left:0;border-top:1px solid var(--line);padding-left:0;padding-top:16px}
+  .panel{border-left:0;border-top:1px solid var(--line);padding-left:0;padding-top:16px;flex:0 0 auto}
   .cap{padding-left:14px}
   footer{gap:12px;padding-top:14px}
   .chips{margin-left:0;width:100%;overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px;
@@ -353,6 +353,7 @@ const CHIPS = [
   {q:"What have you built?", a:`Quite a lot. ${D}'s flagship is PropSight, a Singapore property platform that runs itself, writes its own market reports, and values homes to within about four percent. But property is just where you see it live. The same engineering, autonomous systems, custom tools, whole platforms, he builds for any business. And me, of course.`, h:"research"},
   {q:"How does the valuation model work?", a:`It is a comps model, but a transparent one. It pulls real caveats from official government data, weighs the most similar recent sales, and adjusts for things like storey and remaining lease. It lands within about four percent of the actual price, and it shows its working, so an agent can stand behind it. ${D} built and backtested the whole thing himself.`, h:"tools"},
   {q:"Are you just ChatGPT?", a:`I run on a language model, sure. But that is the easy part, anyone can rent that. Knowing exactly what ${D} built, answering as his own system, staying accurate on Singapore property, that is the work around the model. And I am the proof it works.`, h:"conversational"},
+  {q:"Could I have my own Mia?", a:`Ha, you can. I'm not a one-off. ${D} can build you your own version of me, trained on your business, living on your website, talking to your clients at 3am while you're asleep. Same idea, your brand, your knowledge.`, h:"conversational"},
   {q:"What could you build for me?", a:`Whatever eats your team's time. A research engine that briefs you every morning, a valuation tool your clients self-serve, a video studio, or a responder like me that talks to leads the second they come in. Tell me what your agency still does by hand, and I will tell you what he would automate.`, h:"custom"},
   {q:"How much does this cost?", a:`Less than you would think. This whole conversation runs on a few cents of compute, and most of what ${D} builds runs on a single machine with no monthly cloud bill. The value is not the running cost, it is what stops being manual once it exists.`, h:"conversational"},
 ];
