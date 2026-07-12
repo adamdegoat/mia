@@ -318,6 +318,11 @@ const CONFIG = {
   voiceName: "",
   speechRate: 1.0,
   speechPitch: 1.02,
+
+  // The browser voice spells "Mia" as M-I-A (treats it like an acronym). We feed
+  // it this phonetic spelling instead, while the screen still shows "Mia".
+  // Tune by ear if it sounds off: try "Mya", "Mee-ah", "Meeya".
+  sayName: "Meeya",
 };
 
 /* Mia's opening line to the room (spoken instantly, no model needed). */
@@ -344,7 +349,7 @@ const D = CONFIG.developerName;
 // Each pill: q = the question (button label + what gets sent), a = scripted
 // fallback spoken if the live call fails/times out, h = capability to surface.
 const CHIPS = [
-  {q:"What have you built?", a:`Quite a lot. ${D} built PropSight, a Singapore property intelligence platform where a news engine writes a market digest every morning on its own. A studio that turns listings into social videos right in the browser. A whole suite of property tools, including a valuation model accurate to within about four percent. And me.`, h:"research"},
+  {q:"What have you built?", a:`Quite a lot. ${D}'s flagship is PropSight, a Singapore property platform that runs itself, writes its own market reports, and values homes to within about four percent. But property is just where you see it live. The same engineering, autonomous systems, custom tools, whole platforms, he builds for any business. And me, of course.`, h:"research"},
   {q:"How does the valuation model work?", a:`It is a comps model, but a transparent one. It pulls real caveats from official government data, weighs the most similar recent sales, and adjusts for things like storey and remaining lease. It lands within about four percent of the actual price, and it shows its working, so an agent can stand behind it. ${D} built and backtested the whole thing himself.`, h:"tools"},
   {q:"Are you just ChatGPT?", a:`I run on a language model, sure. But that is the easy part, anyone can rent that. Knowing exactly what ${D} built, answering as his own system, staying accurate on Singapore property, that is the work around the model. And I am the proof it works.`, h:"conversational"},
   {q:"What could you build for me?", a:`Whatever eats your team's time. A research engine that briefs you every morning, a valuation tool your clients self-serve, a video studio, or a responder like me that talks to leads the second they come in. Tell me what your agency still does by hand, and I will tell you what he would automate.`, h:"custom"},
@@ -550,7 +555,8 @@ let curUtter=null;
 function speak(text,done){
   stopSpeaking();
   mode='speaking'; setState('Speaking',true); energy=0.6;
-  const u=new SpeechSynthesisUtterance(text);
+  const spoken=String(text).replace(/\bMIA\b/gi, CONFIG.sayName);  // fix name pronunciation
+  const u=new SpeechSynthesisUtterance(spoken);
   if(chosenVoice) u.voice=chosenVoice;
   u.rate=CONFIG.speechRate; u.pitch=CONFIG.speechPitch;
   u.onboundary=()=>{ energy=Math.min(1,energy+0.5); };
