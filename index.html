@@ -50,12 +50,17 @@ body::after{
 .app{
   height:100%;height:100dvh;
   display:grid;
-  grid-template-rows:auto 1fr auto;
-  grid-template-columns:minmax(0,1fr);
-  gap:0;
+  grid-template-columns:minmax(0,1.55fr) minmax(0,.95fr);
+  grid-template-rows:auto minmax(0,1fr) auto;
+  grid-template-areas:"header header" "stage panel" "footer footer";
+  column-gap:clamp(20px,3vw,48px);
   max-width:1440px;margin:0 auto;
   padding:clamp(16px,2.2vw,30px);
 }
+header{grid-area:header}
+.stage{grid-area:stage}
+.panel{grid-area:panel}
+footer{grid-area:footer}
 
 /* ---------- header ---------- */
 header{
@@ -96,14 +101,7 @@ header{
   100%{box-shadow:0 0 0 0 rgba(255,106,43,0)}
 }
 
-/* ---------- main ---------- */
-main{
-  display:grid;
-  grid-template-columns:minmax(0,1.55fr) minmax(0,.95fr);
-  gap:clamp(20px,3vw,48px);
-  min-height:0;
-  align-items:stretch;
-}
+/* ---------- stage ---------- */
 .stage{
   display:flex;flex-direction:column;justify-content:flex-start;
   min-height:0;overflow:hidden;position:relative;
@@ -129,7 +127,7 @@ main{
   overflow-wrap:break-word;word-break:break-word;
   transition:opacity .5s ease;
 }
-main,.stage,.panel,.convo{min-width:0}
+.stage,.panel,.convo{min-width:0}
 .now.dim{opacity:.18}
 .now .who{
   display:block;font-family:"Space Mono",monospace;
@@ -241,9 +239,9 @@ footer{
   /* Mobile-first reorder: answer + pills + talk are the core; the capability
      panel drops to the bottom (secondary on a phone). Whole page scrolls. */
   html,body{height:auto;overflow:visible}          /* let the page scroll on mobile (base body is overflow:hidden for desktop) */
-  .app{padding:16px 16px 24px;height:auto;min-height:100dvh;display:flex;flex-direction:column}
+  /* stage/panel/footer are real direct children now, so plain flex order works (no display:contents, which glitched on iOS) */
+  .app{padding:16px 16px 24px;height:auto;min-height:100dvh;display:flex;flex-direction:column;column-gap:0}
   header{order:0}
-  main{display:contents}                 /* stage + panel become page-level blocks so we can reorder */
   .stage{order:1;display:block;overflow:visible;min-height:auto}
   footer{order:2;margin-top:18px;padding-top:16px;gap:12px;flex-wrap:wrap}
   .panel{order:3;margin-top:22px;border-left:0;border-top:1px solid var(--line);padding-left:0;padding-top:16px}
@@ -286,7 +284,6 @@ footer{
     </div>
   </header>
 
-  <main>
     <section class="stage">
       <canvas class="wave" id="wave"></canvas>
       <div class="convo" id="convo">
@@ -302,7 +299,6 @@ footer{
       <h2 id="panelTitle">What he builds</h2>
       <div class="caps" id="caps"></div>
     </aside>
-  </main>
 
   <footer>
     <button class="ptt" id="ptt" aria-label="Hold to speak">
@@ -351,8 +347,9 @@ const CONFIG = {
   // Loudness boost. Mobile plays Web Audio at unity gain, which is soft.
   // Loudness. Live ElevenLabs is quieter so it gets more boost; the pre-recorded
   // clips are already normalized loud, so they get less. A peak limiter stops clipping.
-  voiceVolume: 2.3,     // live (free-form spoken) boost
-  clipVolume: 1.25,     // pre-recorded greeting/pill boost (clips are pre-normalized)
+  clipVolume: 1.3,      // pre-recorded greeting/pill boost (clips are already normalized loud)
+  targetRms: 0.16,      // LIVE audio is auto-normalized to this loudness so it matches the clips
+  voiceVolume: 6,       // fallback live gain if the loudness measurement ever fails
 };
 
 /* Mia's opening line to the room (spoken instantly, no model needed). */
@@ -623,40 +620,49 @@ async function elevenSpeak(text,my,done){
   if(!/audio/i.test(r.headers.get('content-type')||'')) throw new Error('not audio');
   const buf=await r.arrayBuffer();
   if(my!==speakToken) return;
-  await voicePlay(URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'})), my, done);
+  if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+  // Live ElevenLabs audio is ~17dB quieter than the normalized clips. Measure its
+  // loudness and set a matching gain so hold-to-talk is as loud as the pills.
+  let gain=CONFIG.voiceVolume||6;
+  try{
+    const ab=await audioCtx.decodeAudioData(buf.slice(0));
+    const d=ab.getChannelData(0); let sum=0,n=0;
+    for(let i=0;i<d.length;i+=32){ sum+=d[i]*d[i]; n++; }
+    const rms=Math.sqrt(sum/Math.max(1,n));
+    if(rms>0.00001){ gain=Math.min(16, Math.max(1.5, (CONFIG.targetRms||0.16)/rms)); }
+  }catch(e){}
+  await voicePlay(URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'})), my, done, gain);
 }
 
 // PRE-RECORDED voice: play a stored Christine clip (greeting + pills). Free, instant, consistent.
-// Falls back to live TTS of the text if the clip can't load.
 function speakClip(src, fallbackText, done){
   stopSpeaking();
   const my=++speakToken;
   mode='speaking'; setState('Speaking',true); energy=0.6;
-  voicePlay(src, my, done).catch(e=>{ if(my===speakToken){ console.warn('clip failed, using live voice',e); speak(fallbackText||'', done); } });
+  voicePlay(src, my, done, CONFIG.clipVolume||1.3).catch(e=>{ if(my===speakToken){ console.warn('clip failed, using live voice',e); speak(fallbackText||'', done); } });
 }
 
-// low-level player: routes any audio URL (blob or local file) through the loudness graph + voiceprint.
-async function voicePlay(src, my, done){
+// low-level player: routes any audio URL through gain -> peak limiter -> out (+ voiceprint tap).
+async function voicePlay(src, my, done, gain){
   if(my!==speakToken) return;                        // superseded (barge-in / newer reply)
   if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
   if(!ttsAudio){ ttsAudio=new Audio(); ttsAudio.volume=1; }
   ttsAudio.src=src;
   try{
-    if(audioCtx && !ttsSource){                      // wire graph once: source -> gain -> peak limiter -> out (+ analyser tap)
+    if(audioCtx && !ttsSource){                      // wire graph once
       ttsSource=audioCtx.createMediaElementSource(ttsAudio);
       ttsAnalyser=audioCtx.createAnalyser(); ttsAnalyser.fftSize=64;
       ttsData=new Uint8Array(ttsAnalyser.frequencyBinCount);
       ttsGain=audioCtx.createGain();
-      // PEAK limiter: high threshold so it only clamps the loudest spikes and never
-      // squashes the body of the speech (that squashing was the soft/loud pumping).
+      // PEAK limiter: high threshold so it only clamps the loudest spikes, never
+      // squashing the body of the speech (that squashing was the soft/loud pumping).
       const lim=audioCtx.createDynamicsCompressor();
       lim.threshold.value=-1; lim.knee.value=0; lim.ratio.value=20;
       lim.attack.value=0.002; lim.release.value=0.12;
       ttsSource.connect(ttsAnalyser);                  // tap for the voiceprint
       ttsSource.connect(ttsGain); ttsGain.connect(lim); lim.connect(audioCtx.destination);
     }
-    // pre-recorded clips are pre-normalized (need less boost); live ElevenLabs needs more
-    if(ttsGain) ttsGain.gain.value = (String(src).indexOf('blob:')===0) ? (CONFIG.voiceVolume||1) : (CONFIG.clipVolume||1);
+    if(ttsGain) ttsGain.gain.value = gain || 1;
     if(audioCtx && audioCtx.state==='suspended') await audioCtx.resume();
   }catch(e){}
   const finish=()=>{ if(my===speakToken){ ttsOn=false; mode='idle'; setState('Ready',false); done&&done(); } if(src&&src.indexOf('blob:')===0){ try{URL.revokeObjectURL(src);}catch(e){} } };
