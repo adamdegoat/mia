@@ -155,7 +155,7 @@ async function tts(text, env) {
       body: JSON.stringify({
         text,
         model_id: "eleven_turbo_v2_5",
-        voice_settings: { stability: 0.40, similarity_boost: 0.8, style: 0.55, use_speaker_boost: true },
+        voice_settings: { stability: 0.40, similarity_boost: 0.8, style: 0.55, use_speaker_boost: true, speed: 1.12 },
       }),
     });
     if (!r.ok) return new Response("tts_error", { status: 502, headers: CORS });
