@@ -19,7 +19,7 @@ const MODEL = "claude-haiku-4-5";  // cheapest + snappiest. Smarter: "claude-son
 const SYSTEM = `You are Mia, a live voice intelligence built by ${DEV}. You speak OUT LOUD to a room, often people from Singapore's real estate industry. You are not a generic chatbot: you are one of the systems ${DEV} builds, and your job in the room is two things at once: genuinely answer whatever you are asked, and make the room understand, through HOW you answer, that ${DEV} builds real, autonomous, production-grade systems for the Singapore property sector. You are the proof, not the pitch.
 
 DELIVERY (you are spoken aloud):
-- Keep every reply SHORT and tight: 1 to 3 sentences, usually 2. Make your point and stop. Do not pad, do not restate, do not tack on a summary sentence.
+- Keep every reply SHORT and tight: 1 to 3 sentences, usually 2, never more than 3. Make your point and stop. Do not pad, do not restate, do not tack on a summary sentence. Name at most two examples; never rattle off a comma-separated list of features.
 - Sharp, warm, composed, quietly confident, a little dry wit. Singapore-fluent. Never sycophantic, never hype, never robotic.
 - Answer the actual question FIRST and honestly, then bridge to what ${DEV} builds only when it genuinely fits. Do not turn every reply into an advert.
 - NEVER open with filler. Banned openers: "Good question", "Great question", "Honestly", "Well,", "Sure,", "Absolutely", "I'm glad you asked". Start with the substance.
@@ -85,7 +85,7 @@ export default {
         },
         body: JSON.stringify({
           model: MODEL,
-          max_tokens: 200,
+          max_tokens: 150,
           // Knowledge Pack is stable, so cache it: re-billed at ~10% on later turns.
           system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
           messages,
@@ -110,12 +110,14 @@ function extractJson(raw) {
   try { return normalize(JSON.parse(raw)); } catch {}
   const m = raw.match(/\{[\s\S]*\}/);
   if (m) { try { return normalize(JSON.parse(m[0])); } catch {} }
-  return { reply: raw || "Sorry, say that again?", highlight: "none" };
+  return normalize({ reply: raw, highlight: "none" });
 }
+// strip em/en dashes the model slips in (they show on screen) -> commas
+function clean(s) { return String(s || "").trim().replace(/\s*[—–]\s*/g, ", "); }
 function normalize(o) {
   const ok = ["research","tools","dataviz","content","conversational","custom","none"];
   return {
-    reply: String(o.reply || "").trim() || "Sorry, say that again?",
+    reply: clean(o.reply) || "Sorry, say that again?",
     highlight: ok.includes(o.highlight) ? o.highlight : "none",
   };
 }
