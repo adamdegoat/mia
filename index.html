@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Mia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   CONFIG NOTE: change your name + connect the brain in the
+   <script> CONFIG block near the bottom of this file.
+   ============================================================ */
+
+:root{
+  --ink:#0B0A0D;
+  --ink-2:#131116;
+  --line:rgba(242,237,230,.09);
+  --line-2:rgba(242,237,230,.16);
+  --text:#F3EEE7;
+  --muted:#9A939C;
+  --muted-2:#837D88;
+  --ember:#FF6A2B;
+  --ember-2:#FF8A4A;
+  --ember-soft:rgba(255,106,43,.14);
+  --ok:#8FE388;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--ink);
+  color:var(--text);
+  font-family:"Space Grotesk",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  overflow:hidden;
+}
+/* fine grain overlay, keeps the ink from looking flat/AI-perfect */
+body::after{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:9;
+  opacity:.05;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+.mono{font-family:"Space Mono",monospace}
+
+/* ---------- shell ---------- */
+.app{
+  height:100%;height:100dvh;
+  display:grid;
+  grid-template-rows:auto 1fr auto;
+  grid-template-columns:minmax(0,1fr);
+  gap:0;
+  max-width:1440px;margin:0 auto;
+  padding:clamp(16px,2.2vw,30px);
+}
+
+/* ---------- header ---------- */
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding-bottom:clamp(14px,1.8vw,22px);
+  border-bottom:1px solid var(--line);
+}
+.brand{display:flex;align-items:baseline;gap:14px}
+.brand .mark{
+  font-weight:700;font-size:clamp(20px,2.4vw,26px);letter-spacing:.02em;
+}
+.brand .mark b{color:var(--ember);font-weight:700}
+.brand .sub{
+  font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted-2);
+}
+.status{display:flex;align-items:center;gap:16px}
+.tc{font-size:12px;letter-spacing:.14em;color:var(--muted)}
+.state{
+  display:flex;align-items:center;gap:9px;
+  font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);
+}
+.dot{
+  width:9px;height:9px;border-radius:50%;background:var(--muted-2);
+  box-shadow:0 0 0 0 rgba(255,106,43,0);
+}
+.state[data-live="1"] .dot{background:var(--ember);animation:pulse 1.6s ease-out infinite}
+.state[data-live="1"]{color:var(--ember)}
+@keyframes pulse{
+  0%{box-shadow:0 0 0 0 rgba(255,106,43,.5)}
+  70%{box-shadow:0 0 0 10px rgba(255,106,43,0)}
+  100%{box-shadow:0 0 0 0 rgba(255,106,43,0)}
+}
+
+/* ---------- main ---------- */
+main{
+  display:grid;
+  grid-template-columns:minmax(0,1.55fr) minmax(0,.95fr);
+  gap:clamp(20px,3vw,48px);
+  min-height:0;
+  align-items:stretch;
+}
+.stage{
+  display:flex;flex-direction:column;justify-content:flex-start;
+  min-height:0;overflow:hidden;position:relative;
+}
+.wave{
+  width:100%;height:clamp(110px,16vh,175px);display:block;flex:0 0 auto;
+}
+.convo{
+  flex:1 1 auto;min-height:0;overflow-y:auto;position:relative;
+  display:flex;flex-direction:column;
+  padding-top:clamp(12px,2.2vh,24px);
+  scrollbar-width:none;
+}
+.convo::-webkit-scrollbar{display:none}
+.convo.more{
+  -webkit-mask-image:linear-gradient(to bottom,#000 82%,transparent);
+  mask-image:linear-gradient(to bottom,#000 82%,transparent);
+}
+.now{
+  font-size:clamp(20px,2vw,28px);
+  font-weight:500;line-height:1.32;letter-spacing:-.01em;
+  max-width:21em;min-height:0;
+  overflow-wrap:break-word;word-break:break-word;
+  transition:opacity .5s ease;
+}
+main,.stage,.panel,.convo{min-width:0}
+.now.dim{opacity:.18}
+.now .who{
+  display:block;font-family:"Space Mono",monospace;
+  font-size:12px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--ember);margin-bottom:14px;font-weight:400;
+}
+.now .who.you{color:var(--muted)}
+.history{
+  display:flex;flex-direction:column;gap:6px;
+  max-width:34ch;margin-bottom:14px;
+}
+.history p{
+  margin:0;font-size:14px;line-height:1.4;color:var(--muted-2);
+}
+.history p b{color:var(--muted);font-weight:400}
+
+/* ---------- capability panel ---------- */
+.panel{
+  border-left:1px solid var(--line);
+  padding-left:clamp(20px,2.4vw,34px);
+  display:flex;flex-direction:column;min-height:0;
+}
+.panel h2{
+  font-family:"Space Mono",monospace;font-weight:400;
+  font-size:11px;letter-spacing:.24em;text-transform:uppercase;
+  color:var(--muted-2);margin:0 0 clamp(16px,2vh,22px);
+}
+.caps{display:flex;flex-direction:column;gap:2px;overflow:hidden}
+.cap{
+  padding:clamp(11px,1.5vh,15px) 0 clamp(11px,1.5vh,15px) 16px;
+  border-left:2px solid transparent;
+  margin-left:-1px;
+  opacity:.5;transition:opacity .45s ease,border-color .45s ease,transform .45s ease;
+}
+.cap .t{font-size:clamp(15px,1.15vw,18px);font-weight:600;letter-spacing:-.01em}
+.cap .e{font-size:13px;line-height:1.45;color:var(--muted);margin-top:5px;
+  max-height:0;overflow:hidden;opacity:0;transition:max-height .45s ease,opacity .45s ease,margin .45s ease}
+.cap.on{
+  opacity:1;border-color:var(--ember);
+  background:linear-gradient(90deg,var(--ember-soft),transparent 82%);
+}
+.cap.on .t{color:var(--text)}
+.cap.on .e{max-height:5em;opacity:1}
+
+/* ---------- footer / controls ---------- */
+footer{
+  padding-top:clamp(16px,2vh,22px);
+  border-top:1px solid var(--line);
+  display:flex;align-items:center;gap:clamp(14px,2vw,26px);
+  flex-wrap:wrap;
+}
+.ptt{
+  appearance:none;border:0;cursor:pointer;flex:0 0 auto;
+  display:flex;align-items:center;gap:12px;
+  background:var(--ember);color:#160a04;
+  font-family:"Space Grotesk";font-weight:600;font-size:15px;letter-spacing:.01em;
+  padding:15px 24px;border-radius:999px;
+  transition:transform .12s ease,background .2s ease,box-shadow .2s ease;
+  box-shadow:0 6px 24px -8px rgba(255,106,43,.6);
+  user-select:none;-webkit-user-select:none;touch-action:none;
+}
+.ptt svg{width:18px;height:18px}
+.ptt:hover{background:var(--ember-2)}
+.ptt.holding{transform:scale(.97);background:#fff;box-shadow:0 0 0 6px var(--ember-soft)}
+.ptt:focus-visible{outline:2px solid var(--ember-2);outline-offset:3px}
+.hint{font-size:12px;color:var(--muted-2);letter-spacing:.02em;flex:0 0 auto}
+.hint b{color:var(--muted);font-weight:400}
+.chips{display:flex;gap:9px;flex-wrap:wrap;margin-left:auto}
+.chip{
+  appearance:none;cursor:pointer;
+  background:transparent;border:1px solid var(--line-2);color:var(--muted);
+  font-family:"Space Grotesk";font-size:13px;
+  padding:9px 15px;border-radius:999px;
+  transition:border-color .2s ease,color .2s ease,background .2s ease;
+}
+.chip:hover{border-color:var(--ember);color:var(--text);background:var(--ember-soft)}
+.chip:focus-visible{outline:2px solid var(--ember-2);outline-offset:2px}
+.chip:disabled{opacity:.4;cursor:default}
+
+/* ---------- start overlay (cold open) ---------- */
+.veil{
+  position:fixed;inset:0;z-index:20;background:var(--ink);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:30px;text-align:center;padding:24px;
+  transition:opacity .6s ease;
+}
+.veil.gone{opacity:0;pointer-events:none}
+.veil .big{
+  font-size:clamp(40px,9vw,96px);font-weight:700;letter-spacing:-.02em;line-height:1;
+}
+.veil .big b{color:var(--ember)}
+.veil .line{color:var(--muted);max-width:30ch;font-size:clamp(15px,1.4vw,18px);line-height:1.5}
+.begin{
+  appearance:none;border:1px solid var(--line-2);cursor:pointer;
+  background:transparent;color:var(--text);
+  font-family:"Space Grotesk";font-weight:600;font-size:16px;
+  padding:16px 34px;border-radius:999px;margin-top:6px;
+  display:flex;align-items:center;gap:12px;
+  transition:border-color .2s ease,background .2s ease;
+}
+.begin:hover{border-color:var(--ember);background:var(--ember-soft)}
+.begin .d{width:9px;height:9px;border-radius:50%;background:var(--ember);
+  animation:pulse 1.6s ease-out infinite}
+.warn{position:fixed;bottom:14px;left:0;right:0;text-align:center;
+  font-size:12px;color:var(--muted-2);z-index:21}
+
+/* ---------- responsive ---------- */
+@media (max-width:860px){
+  .app{padding:16px;grid-template-rows:auto 1fr auto}
+  main{display:flex;flex-direction:column;gap:16px;overflow-y:auto}
+  .stage{display:block;overflow:visible}
+  .convo{display:block;overflow:visible;flex:none;padding-top:0}
+  .wave{height:104px}
+  .now{font-size:clamp(18px,5vw,22px);line-height:1.34;max-width:100%;width:100%;margin-top:12px}
+  .history{display:none}
+  .panel{border-left:0;border-top:1px solid var(--line);padding-left:0;padding-top:16px}
+  .cap{padding-left:14px}
+  footer{gap:12px;padding-top:14px}
+  .chips{margin-left:0;width:100%;overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px;
+    -webkit-overflow-scrolling:touch}
+  .chip{flex:0 0 auto}
+  .hint{display:none}
+  .status .tc{display:none}
+}
+@media (max-width:560px){
+  .ptt{flex:1 1 auto;justify-content:center}
+  .brand .sub{display:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="mark" id="mark">M<b>i</b>a</div>
+      <div class="sub">in-house intelligence</div>
+    </div>
+    <div class="status">
+      <div class="tc mono" id="tc">00:00</div>
+      <div class="state" id="state" data-live="0"><span class="dot"></span><span id="stateLabel">Ready</span></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="stage">
+      <canvas class="wave" id="wave"></canvas>
+      <div class="convo" id="convo">
+        <div class="history" id="history" aria-live="off"></div>
+        <div class="now dim" id="now">
+          <span class="who" id="nowWho">Mia</span>
+          <span id="nowText">Ready when you are.</span>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <h2 id="panelTitle">What he builds</h2>
+      <div class="caps" id="caps"></div>
+    </aside>
+  </main>
+
+  <footer>
+    <button class="ptt" id="ptt" aria-label="Hold to speak">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+      <span>Hold to speak</span>
+    </button>
+    <div class="hint"><b>or</b> hold <b>spacebar</b></div>
+    <div class="chips" id="chips"></div>
+  </footer>
+</div>
+
+<div class="veil" id="veil">
+  <div class="big">M<b>i</b>a</div>
+  <div class="line">A live system, not a slide. Tap to let her introduce herself, then ask her anything.</div>
+  <button class="begin" id="begin"><span class="d"></span>Begin</button>
+</div>
+<div class="warn" id="warnBrowser"></div>
+
+<script>
+/* ============================================================================
+   1) CONFIG  -  the only two things you normally touch
+   ============================================================================ */
+const CONFIG = {
+  // Your name. Mia says this out loud and it shows in the header line.
+  developerName: "Adam",
+
+  // Paste your Cloudflare Worker URL here to make Mia answer LIVE with Claude.
+  // Leave it "" and she runs on built-in scripted answers (offline demo mode).
+  workerUrl: "",
+
+  // Pick a voice by name if you want a specific one (see console for the list).
+  // "" = auto-pick the best available English voice.
+  voiceName: "",
+  speechRate: 1.0,
+  speechPitch: 1.02,
+};
+
+/* Mia's opening line to the room (spoken instantly, no model needed). */
+const OPENING = `Hi. I'm Mia. I'm not a slide, I'm a system ${CONFIG.developerName} built. `
+  + `Ask me anything out loud, or tap one of the questions below to get us started.`;
+
+/* ============================================================================
+   2) CAPABILITY CARDS  -  surfaced on the right as Mia talks
+   ============================================================================ */
+const CAPS = {
+  research:{t:"Autonomous research engines", e:"Daily property digests, monthly market analysis, a policy monitor. They run on a schedule with nobody touching them."},
+  tools:{t:"Property tools and calculators", e:"Valuation, stamp duty and ABSD, affordability, deal pipelines, a buyer roadmap. The things an agency wishes it had in-house."},
+  dataviz:{t:"Market and data visualization", e:"Singapore property data turned into something a client actually understands. 3D included."},
+  content:{t:"Content and video engines", e:"Marketing content and listing reels that generate themselves on a schedule."},
+  conversational:{t:"Conversational and voice systems", e:"Assistants and responders that talk to your clients. Like me."},
+  custom:{t:"Custom internal tools", e:"CRMs and dashboards built around how your agency actually works."},
+};
+const CAP_ORDER = ["research","tools","dataviz","content","conversational","custom"];
+
+/* ============================================================================
+   3) SCRIPTED ANSWERS  -  used when workerUrl is empty (offline demo mode)
+   ============================================================================ */
+const D = CONFIG.developerName;
+// Each pill: q = the question (button label + what gets sent), a = scripted
+// fallback spoken if the live call fails/times out, h = capability to surface.
+const CHIPS = [
+  {q:"What have you built?", a:`Quite a lot. ${D} built PropSight, a Singapore property intelligence platform where a news engine writes a market digest every morning on its own. A studio that turns listings into social videos right in the browser. A whole suite of property tools, including a valuation model accurate to within about four percent. And me.`, h:"research"},
+  {q:"How does the valuation model work?", a:`It is a comps model, but a transparent one. It pulls real caveats from official government data, weighs the most similar recent sales, and adjusts for things like storey and remaining lease. It lands within about four percent of the actual price, and it shows its working, so an agent can stand behind it. ${D} built and backtested the whole thing himself.`, h:"tools"},
+  {q:"Are you just ChatGPT?", a:`I run on a language model, sure. But that is the easy part, anyone can rent that. Knowing exactly what ${D} built, answering as his own system, staying accurate on Singapore property, that is the work around the model. And I am the proof it works.`, h:"conversational"},
+  {q:"What could you build for me?", a:`Whatever eats your team's time. A research engine that briefs you every morning, a valuation tool your clients self-serve, a video studio, or a responder like me that talks to leads the second they come in. Tell me what your agency still does by hand, and I will tell you what he would automate.`, h:"custom"},
+  {q:"How much does this cost?", a:`Less than you would think. This whole conversation runs on a few cents of compute, and most of what ${D} builds runs on a single machine with no monthly cloud bill. The value is not the running cost, it is what stops being manual once it exists.`, h:"conversational"},
+];
+const FALLBACKS = [
+  `The short version: ${D} builds custom systems for property here. Research engines, tools, dashboards, things that talk like me. Tell me what your team still does by hand and I'll tell you what he'd automate.`,
+  `That depends on you, which is the point. ${D} builds to fit the agency. Give me the task that eats your week and I'll tell you how he'd take it off your plate.`,
+  `I could take that a few ways. What ${D} really does is turn the repetitive parts of property work into systems that run on their own. What's the part you'd never want to touch again?`,
+  `Fair one. I'm a small taste of it, ${D} builds the bigger machines behind the scenes, the ones that research, calculate, and follow up without anyone lifting a finger.`,
+];
+let _fb=0; const nextFallback=()=>FALLBACKS[(_fb++)%FALLBACKS.length];
+const FB_HL=["custom","tools","research","conversational"];
+
+/* ============================================================================
+   4) ENGINE  -  browser speech in, Claude (or script) out, browser voice back
+   ============================================================================ */
+const el = id => document.getElementById(id);
+const stateEl=el('state'), stateLabel=el('stateLabel'), tcEl=el('tc');
+const nowEl=el('now'), nowText=el('nowText'), nowWho=el('nowWho'), histEl=el('history');
+let convo=[];               // [{role, content}] for the model
+let busy=false, started=false;
+
+/* ---- header wordmark + panel reflect the real name ---- */
+el('mark').innerHTML = 'M<b>i</b>a';
+el('panelTitle').textContent = `What ${D} builds`;
+
+/* ---- capability panel ---- */
+const capNodes={};
+(function buildCaps(){
+  const wrap=el('caps');
+  CAP_ORDER.forEach(k=>{
+    const d=document.createElement('div'); d.className='cap';
+    d.innerHTML=`<div class="t">${CAPS[k].t}</div><div class="e">${CAPS[k].e}</div>`;
+    wrap.appendChild(d); capNodes[k]=d;
+  });
+})();
+function highlight(k){
+  CAP_ORDER.forEach(x=>capNodes[x].classList.toggle('on', x===k));
+}
+
+/* ---- chips ---- */
+(function buildChips(){
+  const wrap=el('chips');
+  CHIPS.forEach(c=>{
+    const b=document.createElement('button'); b.className='chip'; b.textContent=c.q;
+    b.addEventListener('click',()=>{ if(!busy&&started) ask(c.q); });
+    wrap.appendChild(b);
+  });
+})();
+
+/* ---- status + timecode ---- */
+function setState(label,live){ stateLabel.textContent=label; stateEl.dataset.live=live?'1':'0'; }
+let t0=null;
+setInterval(()=>{
+  if(!t0) return;
+  const s=Math.floor((performance.now()-t0)/1000);
+  tcEl.textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+},500);
+
+/* ---- transcript lines ---- */
+function showNow(who,text){
+  nowWho.textContent=who; nowWho.className='who'+(who!=='Mia'?' you':'');
+  nowText.textContent=text; nowEl.classList.remove('dim');
+  const c=el('convo'); if(c) requestAnimationFrame(()=>{ c.scrollTop=nowEl.offsetTop; });
+}
+function pushHistory(who,text){
+  const p=document.createElement('p'); p.innerHTML=`<b>${who}:</b> ${text}`;
+  histEl.prepend(p); while(histEl.children.length>3) histEl.lastChild.remove();
+}
+
+/* ============================================================================
+   5) VOICEPRINT  -  reactive equalizer on canvas
+   ============================================================================ */
+const cv=el('wave'), ctx=cv.getContext('2d');
+let mode='idle', energy=0, micData=null, W=0, Hh=0, dpr=1;
+const BARS=54;
+function sizeCanvas(){
+  dpr=Math.min(window.devicePixelRatio||1,2);
+  W=cv.clientWidth; Hh=cv.clientHeight;
+  cv.width=W*dpr; cv.height=Hh*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+window.addEventListener('resize',sizeCanvas);
+let phase=0;
+function draw(){
+  requestAnimationFrame(draw);
+  if(!W){sizeCanvas(); if(!W) return;}
+  ctx.clearRect(0,0,W,Hh);
+  const mid=Hh/2, gap=W/BARS, bw=Math.max(2,gap*0.34);
+  phase+=0.05; energy*=0.90;
+  for(let i=0;i<BARS;i++){
+    const x=i*gap+gap/2;
+    const centerBias=1-Math.abs(i-(BARS-1)/2)/((BARS-1)/2); // taller in middle
+    let amp;
+    if(mode==='listening'&&micData){
+      const v=micData[Math.floor(i/BARS*micData.length)]/255;
+      amp=v*(0.35+0.65*centerBias);
+    }else if(mode==='speaking'){
+      const wobble=0.5+0.5*Math.sin(phase*2+i*0.7)*Math.sin(phase*0.6+i);
+      amp=(0.12+energy*0.9)*(0.4+0.6*centerBias)*(0.55+0.45*wobble);
+    }else if(mode==='thinking'){
+      const trav=Math.exp(-Math.pow(((i/BARS)- ((phase*0.12)%1))*6,2));
+      amp=0.06+trav*0.5*centerBias+0.03*Math.sin(phase+i);
+    }else{ // idle
+      amp=0.05+0.04*centerBias*(0.5+0.5*Math.sin(phase*0.6+i*0.35));
+    }
+    const h=Math.max(2,amp*mid*1.7);
+    const on=(mode!=='idle');
+    const alpha=on?(0.5+0.5*centerBias):(0.16+0.24*centerBias);
+    ctx.fillStyle=`rgba(255,106,43,${alpha})`;
+    const r=Math.min(bw/2,h);
+    roundBar(x-bw/2,mid-h,bw,h*2,r);
+  }
+}
+function roundBar(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();ctx.fill();
+}
+sizeCanvas(); draw();
+
+/* ============================================================================
+   6) MICROPHONE analyser (for listening reactivity) + push-to-talk STT
+   ============================================================================ */
+let audioCtx=null, analyser=null, micStream=null;
+async function initMic(){
+  if(analyser) return true;
+  try{
+    micStream=await navigator.mediaDevices.getUserMedia({audio:true});
+    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    const src=audioCtx.createMediaStreamSource(micStream);
+    analyser=audioCtx.createAnalyser(); analyser.fftSize=64;
+    src.connect(analyser); micData=new Uint8Array(analyser.frequencyBinCount);
+    return true;
+  }catch(e){ console.warn('mic denied / unavailable',e); return false; }
+}
+function pumpMic(){ if(mode==='listening'&&analyser){ analyser.getByteFrequencyData(micData); requestAnimationFrame(pumpMic);} }
+
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let recog=null, heard='', recognizing=false;
+if(SR){
+  recog=new SR(); recog.lang='en-US'; recog.interimResults=true; recog.continuous=false;
+  recog.onresult=e=>{
+    let t=''; for(let i=e.resultIndex;i<e.results.length;i++) t+=e.results[i][0].transcript;
+    heard=t.trim(); if(heard) showNow('You',heard);
+  };
+  recog.onend=()=>{ recognizing=false; };
+}
+function startListen(){
+  if(busy||!started) return;
+  stopSpeaking();               // barge-in: cut Mia off if she was talking
+  heard='';
+  mode='listening'; setState('Listening',true);
+  showNow('You','...');
+  if(recog){ try{ recog.start(); recognizing=true; }catch(e){} }
+  pumpMic();
+}
+function endListen(){
+  if(mode!=='listening') return;
+  if(recog&&recognizing){ try{ recog.stop(); }catch(e){} }
+  mode='idle'; setState('Ready',false);
+  setTimeout(()=>{ if(heard) ask(heard); else nowEl.classList.add('dim'); },250);
+}
+
+/* push-to-talk bindings (mouse, touch, spacebar) with barge-in */
+const ptt=el('ptt');
+function readyToTalk(){
+  if(!started) return false;
+  if(mode==='speaking'){                 // barge-in: cut Mia off and take over
+    stopSpeaking(); busy=false;
+    document.querySelectorAll('.chip').forEach(c=>c.disabled=false);
+    return true;
+  }
+  return !busy;                          // ignore only while she is thinking
+}
+const down=e=>{ e.preventDefault(); if(!readyToTalk()) return; ptt.classList.add('holding'); startListen(); };
+const up=e=>{ e.preventDefault(); ptt.classList.remove('holding'); endListen(); };
+ptt.addEventListener('pointerdown',down);
+ptt.addEventListener('pointerup',up);
+ptt.addEventListener('pointerleave',()=>{ if(mode==='listening'){ptt.classList.remove('holding');endListen();} });
+let spaceHeld=false;
+window.addEventListener('keydown',e=>{ if(e.code==='Space'&&!spaceHeld&&started){ e.preventDefault(); if(!readyToTalk())return; spaceHeld=true;ptt.classList.add('holding');startListen(); }});
+window.addEventListener('keyup',e=>{ if(e.code==='Space'&&spaceHeld){ e.preventDefault();spaceHeld=false;ptt.classList.remove('holding');endListen(); }});
+
+/* ============================================================================
+   7) VOICE OUT  -  browser speech synthesis
+   ============================================================================ */
+let voices=[], chosenVoice=null;
+function pickVoice(){
+  voices=speechSynthesis.getVoices();
+  if(!voices.length) return;
+  console.log('Voices available:',voices.map(v=>v.name+' ('+v.lang+')'));
+  if(CONFIG.voiceName){ chosenVoice=voices.find(v=>v.name===CONFIG.voiceName)||null; }
+  if(!chosenVoice){
+    const pref=['Google UK English Female','Samantha','Google US English','Karen','Serena','Moira','Tessa'];
+    for(const name of pref){ const v=voices.find(v=>v.name===name); if(v){chosenVoice=v;break;} }
+  }
+  if(!chosenVoice) chosenVoice=voices.find(v=>/^en/i.test(v.lang))||voices[0];
+}
+speechSynthesis.onvoiceschanged=pickVoice; pickVoice();
+
+let curUtter=null;
+function speak(text,done){
+  stopSpeaking();
+  mode='speaking'; setState('Speaking',true); energy=0.6;
+  const u=new SpeechSynthesisUtterance(text);
+  if(chosenVoice) u.voice=chosenVoice;
+  u.rate=CONFIG.speechRate; u.pitch=CONFIG.speechPitch;
+  u.onboundary=()=>{ energy=Math.min(1,energy+0.5); };
+  u.onend=()=>{ if(curUtter===u){ mode='idle'; setState('Ready',false); curUtter=null; done&&done(); } };
+  curUtter=u; speechSynthesis.speak(u);
+  // safety: if synthesis silently fails, still release the UI
+  clearTimeout(speak._t); speak._t=setTimeout(()=>{ if(curUtter===u&&!speechSynthesis.speaking){ u.onend(); } }, Math.max(2500,text.length*90));
+}
+function stopSpeaking(){ if(speechSynthesis.speaking||curUtter){ curUtter=null; speechSynthesis.cancel(); } }
+
+/* ============================================================================
+   8) ASK  -  route a user turn to the brain, speak the answer
+   ============================================================================ */
+async function ask(text){
+  if(busy) return; busy=true;
+  document.querySelectorAll('.chip').forEach(c=>c.disabled=true);
+  pushHistory('You',text); showNow('You',text);
+  convo.push({role:'user',content:text});
+
+  mode='thinking'; setState('Thinking',true);
+
+  // Safe scripted answer for this question — used as the offline-demo reply AND
+  // as the instant fallback if a live call fails or times out. Never dead air.
+  const hit=CHIPS.find(c=>c.q.toLowerCase()===text.toLowerCase());
+  let reply, hl;
+  if(hit){ reply=hit.a; hl=hit.h; }
+  else { const i=_fb; reply=nextFallback(); hl=FB_HL[i%FB_HL.length]; }
+
+  if(CONFIG.workerUrl){                              // live-first: try Claude
+    try{
+      const ctrl=new AbortController(), to=setTimeout(()=>ctrl.abort(),8000);
+      const r=await fetch(CONFIG.workerUrl,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({messages:convo}),signal:ctrl.signal});
+      clearTimeout(to);
+      const j=await r.json();
+      if(j&&j.reply){ reply=j.reply; hl=(j.highlight&&CAPS[j.highlight])?j.highlight:hl; }
+    }catch(e){ console.warn('live answer failed, using scripted fallback',e); }  // keep fallback
+  }else{
+    await wait(650+Math.random()*500);               // offline demo: feel of thinking
+  }
+
+  convo.push({role:'assistant',content:reply});
+  if(hl&&CAPS[hl]) highlight(hl);
+  showNow('Mia',reply); pushHistory('Mia',reply);
+  speak(reply,()=>{
+    busy=false;
+    document.querySelectorAll('.chip').forEach(c=>c.disabled=false);
+  });
+}
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ============================================================================
+   9) START  -  cold open
+   ============================================================================ */
+el('begin').addEventListener('click',async()=>{
+  el('veil').classList.add('gone');
+  started=true; t0=performance.now();
+  await initMic();
+  // speak the opening line directly (instant, reliable, no model call)
+  convo.push({role:'assistant',content:OPENING});
+  showNow('Mia',OPENING); highlight('conversational');
+  // resume audio context on gesture
+  if(audioCtx&&audioCtx.state==='suspended') audioCtx.resume();
+  speak(OPENING);
+});
+
+/* browser support note */
+if(!SR){ el('warnBrowser').textContent='Live voice input needs Chrome on desktop. You can still tap the questions below.'; }
+</script>
+</body>
+</html>
