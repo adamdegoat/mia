@@ -333,12 +333,12 @@ const OPENING = `Hi. I'm Mia. I'm not a slide, I'm a system ${CONFIG.developerNa
    2) CAPABILITY CARDS  -  surfaced on the right as Mia talks
    ============================================================================ */
 const CAPS = {
-  research:{t:"Autonomous research engines", e:"Daily property digests, monthly market analysis, a policy monitor. They run on a schedule with nobody touching them."},
-  tools:{t:"Property tools and calculators", e:"Valuation, stamp duty and ABSD, affordability, deal pipelines, a buyer roadmap. The things an agency wishes it had in-house."},
-  dataviz:{t:"Market and data visualization", e:"Singapore property data turned into something a client actually understands. 3D included."},
-  content:{t:"Content and video engines", e:"Marketing content and listing reels that generate themselves on a schedule."},
+  research:{t:"Autonomous research engines", e:"Daily digests, monthly analysis, monitors that run on a schedule with nobody touching them."},
+  tools:{t:"Tools and calculators", e:"Valuation, affordability, pricing, deal pipelines. The things a team wishes it had in-house."},
+  dataviz:{t:"Data visualization", e:"Raw data turned into something anyone can actually understand. 3D included."},
+  content:{t:"Content and video engines", e:"Marketing content and videos that generate themselves on a schedule."},
   conversational:{t:"Conversational and voice systems", e:"Assistants and responders that talk to your clients. Like me."},
-  custom:{t:"Custom internal tools", e:"CRMs and dashboards built around how your agency actually works."},
+  custom:{t:"Custom software and dashboards", e:"CRMs, dashboards and internal platforms built around how you actually work."},
 };
 const CAP_ORDER = ["research","tools","dataviz","content","conversational","custom"];
 
@@ -592,7 +592,9 @@ async function ask(text){
         body:JSON.stringify({messages:convo}),signal:ctrl.signal});
       clearTimeout(to);
       const j=await r.json();
-      if(j&&j.reply){ reply=j.reply; hl=(j.highlight&&CAPS[j.highlight])?j.highlight:hl; }
+      // Use the live reply, but keep the panel PREDICTABLE: pills always light
+      // their fixed card; only free-form spoken questions follow the model's pick.
+      if(j&&j.reply){ reply=j.reply; if(!hit && j.highlight && CAPS[j.highlight]) hl=j.highlight; }
     }catch(e){ console.warn('live answer failed, using scripted fallback',e); }  // keep fallback
   }else{
     await wait(650+Math.random()*500);               // offline demo: feel of thinking
