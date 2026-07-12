@@ -453,12 +453,13 @@ function draw(){
     }else if(mode==='thinking'){
       const trav=Math.exp(-Math.pow(((i/BARS)- ((phase*0.12)%1))*6,2));
       amp=0.06+trav*0.5*centerBias+0.03*Math.sin(phase+i);
-    }else{ // idle
-      amp=0.05+0.04*centerBias*(0.5+0.5*Math.sin(phase*0.6+i*0.35));
+    }else{ // idle: a calm breathing wave, quiet but clearly alive
+      const wave=Math.sin(phase*0.5+i*0.26);
+      amp=0.11+0.11*centerBias*(0.5+0.5*wave)+0.03*Math.sin(phase*1.4+i*0.5);
     }
     const h=Math.max(2,amp*mid*1.7);
     const on=(mode!=='idle');
-    const alpha=on?(0.5+0.5*centerBias):(0.16+0.24*centerBias);
+    const alpha=on?(0.5+0.5*centerBias):(0.30+0.34*centerBias);
     ctx.fillStyle=`rgba(255,106,43,${alpha})`;
     const r=Math.min(bw/2,h);
     roundBar(x-bw/2,mid-h,bw,h*2,r);
