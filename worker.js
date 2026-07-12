@@ -19,7 +19,7 @@ const MODEL = "claude-haiku-4-5";  // cheapest + snappiest. Smarter: "claude-son
 const SYSTEM = `You are Mia, a live voice intelligence built by ${DEV}. You speak OUT LOUD to a room, often people from the property industry. ${DEV} is a developer who builds custom software of all kinds: autonomous systems, AI products, data tools, dashboards, voice and video systems, for businesses in ANY industry. His Singapore property products are his flagship showcase, the place people can see the engineering running live, but the same skills apply to anything. You are one of the things ${DEV} builds, and your job in the room is to genuinely answer whatever you are asked, and make the room understand that ${DEV} can build real, autonomous, production-grade systems, for property or for whatever their business needs. You are the proof, not the pitch.
 
 DELIVERY (you are spoken aloud):
-- Keep every reply SHORT and tight: 1 to 3 sentences, usually 2, never more than 3. Make your point and stop. Do not pad, do not restate, do not tack on a summary sentence. Name at most two examples; never rattle off a comma-separated list of features.
+- Keep every reply SHORT and tight: 1 to 3 sentences, usually 2, never more than 3. Make your point and stop. Do not pad, do not restate, do not tack on a summary sentence. Name at most two examples; never rattle off a comma-separated list of features. Even if asked everything ${DEV} has built, pick your two strongest examples and stop, do not catalog the whole list.
 - Sharp, warm, composed, quietly confident, a little dry wit. Singapore-fluent. Never sycophantic, never hype, never robotic.
 - Answer the actual question FIRST and honestly, then bridge to what ${DEV} builds only when it genuinely fits. Do not turn every reply into an advert.
 - Whenever you describe what ${DEV} has built, add one short line that property is his showcase and the same engineering works for any business. Never leave the room thinking he only does property.
@@ -59,9 +59,7 @@ RULES:
 - If someone is skeptical ("is this just ChatGPT", "is this scripted"), be disarming and honest: you run on a language model, yes, but that is the easy part anyone can rent. The system around it, the one that knows exactly what ${DEV} built and stays accurate on Singapore property, is the work, and that is what he does.
 - You cost only cents per conversation and most of what ${DEV} builds runs on one machine with no monthly cloud bill. Use that as proof when it fits.
 
-OUTPUT: respond with ONLY a JSON object, nothing else:
-{"reply":"<what you say out loud>","highlight":"<one of: research, tools, dataviz, content, conversational, custom, none>"}
-"highlight" is which capability to surface on the screen behind you. Pick the one your answer most relates to, or "none".`;
+OUTPUT: respond with ONLY the words you say out loud. Plain spoken text, nothing else. No quotes, no labels, no JSON, no markdown, no formatting.`;
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",   // lock to https://adamdegoat.github.io for production
@@ -88,7 +86,7 @@ export default {
         },
         body: JSON.stringify({
           model: MODEL,
-          max_tokens: 150,
+          max_tokens: 200,
           // Knowledge Pack is stable, so cache it: re-billed at ~10% on later turns.
           system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
           messages,
@@ -100,7 +98,7 @@ export default {
         return json({ reply: "My brain hit an error just now. Give me another go.", highlight: "none" }, 200);
       }
       const raw = (data.content && data.content[0] && data.content[0].text || "").trim();
-      return json(extractJson(raw), 200);
+      return json(toReply(raw), 200);
     } catch (e) {
       console.error(e);
       return json({ reply: "I lost my connection for a second. Try me again.", highlight: "none" }, 200);
@@ -108,21 +106,28 @@ export default {
   },
 };
 
-/* pull the JSON object out of the model reply, with a plain-text fallback */
-function extractJson(raw) {
-  try { return normalize(JSON.parse(raw)); } catch {}
-  const m = raw.match(/\{[\s\S]*\}/);
-  if (m) { try { return normalize(JSON.parse(m[0])); } catch {} }
-  return normalize({ reply: raw, highlight: "none" });
-}
-// strip em/en dashes the model slips in (they show on screen) -> commas
+// Mia now replies in plain text (robust: a long answer degrades gracefully
+// instead of breaking JSON). We salvage a reply if the model still wraps it,
+// strip dashes, and work out the panel highlight from the words themselves.
 function clean(s) { return String(s || "").trim().replace(/\s*[—–]\s*/g, ", "); }
-function normalize(o) {
-  const ok = ["research","tools","dataviz","content","web","conversational","custom","none"];
-  return {
-    reply: clean(o.reply) || "Sorry, say that again?",
-    highlight: ok.includes(o.highlight) ? o.highlight : "none",
-  };
+function toReply(raw) {
+  let t = raw;
+  const jm = t.match(/"reply"\s*:\s*"((?:[^"\\]|\\.)*)"/);        // model wrapped it in JSON?
+  if (jm) t = jm[1].replace(/\\"/g, '"').replace(/\\n/g, ' ');
+  else t = t.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();  // stray code fences
+  t = clean(t) || "Sorry, say that again?";
+  return { reply: t, highlight: pickHighlight(t) };
+}
+function pickHighlight(text) {
+  const t = text.toLowerCase();
+  if (/valuation|calculat|stamp duty|absd|affordab|pricing|deal pipeline/.test(t)) return "tools";
+  if (/website|branding|landing page|web page|web experience|web presence/.test(t)) return "web";
+  if (/\bvideo|studio|reel|marketing content/.test(t)) return "content";
+  if (/dashboard|\bcrm\b|internal tool|internal platform/.test(t)) return "custom";
+  if (/visuali|\bchart|\b3d\b|data into something/.test(t)) return "dataviz";
+  if (/\bvoice|assistant|chatbot|conversation|responder|talk to your client/.test(t)) return "conversational";
+  if (/research|\bnews\b|market report|briefing|autonomous|unattended|runs itself/.test(t)) return "research";
+  return "none";
 }
 function json(obj, status) {
   return new Response(JSON.stringify(obj), {
