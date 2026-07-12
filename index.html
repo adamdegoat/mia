@@ -72,6 +72,13 @@ header{
   font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted-2);
 }
 .status{display:flex;align-items:center;gap:16px}
+.hright{display:flex;align-items:center;gap:16px}
+.wa{display:inline-flex;align-items:center;gap:8px;text-decoration:none;white-space:nowrap;
+  border:1px solid var(--line-2);color:var(--text);
+  padding:8px 14px;border-radius:999px;font-size:13px;font-weight:600;letter-spacing:.01em;
+  transition:border-color .2s ease,background .2s ease}
+.wa:hover{border-color:var(--ember);background:var(--ember-soft)}
+.wa svg{width:16px;height:16px;flex:none}
 .tc{font-size:12px;letter-spacing:.14em;color:var(--muted)}
 .state{
   display:flex;align-items:center;gap:9px;
@@ -233,6 +240,7 @@ footer{
 @media (max-width:860px){
   /* Mobile-first reorder: answer + pills + talk are the core; the capability
      panel drops to the bottom (secondary on a phone). Whole page scrolls. */
+  html,body{height:auto;overflow:visible}          /* let the page scroll on mobile (base body is overflow:hidden for desktop) */
   .app{padding:16px 16px 24px;height:auto;min-height:100dvh;display:flex;flex-direction:column}
   header{order:0}
   main{display:contents}                 /* stage + panel become page-level blocks so we can reorder */
@@ -253,6 +261,9 @@ footer{
 @media (max-width:560px){
   .ptt{flex:1 1 auto;justify-content:center}
   .brand .sub{display:none}
+  .wa span{display:none}          /* icon-only on narrow phones */
+  .wa{padding:9px}
+  .hright{gap:12px}
 }
 </style>
 </head>
@@ -263,9 +274,15 @@ footer{
       <div class="mark" id="mark">M<b>i</b>a</div>
       <div class="sub">in-house intelligence</div>
     </div>
-    <div class="status">
-      <div class="tc mono" id="tc">00:00</div>
-      <div class="state" id="state" data-live="0"><span class="dot"></span><span id="stateLabel">Ready</span></div>
+    <div class="hright">
+      <a class="wa" href="https://wa.me/6583219747" target="_blank" rel="noopener" aria-label="Message Adam on WhatsApp">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        <span>WhatsApp Adam</span>
+      </a>
+      <div class="status">
+        <div class="tc mono" id="tc">00:00</div>
+        <div class="state" id="state" data-live="0"><span class="dot"></span><span id="stateLabel">Ready</span></div>
+      </div>
     </div>
   </header>
 
@@ -361,13 +378,16 @@ const D = CONFIG.developerName;
 // Each pill: q = the question (button label + what gets sent), a = scripted
 // fallback spoken if the live call fails/times out, h = capability to surface.
 const CHIPS = [
-  {q:"What is Mia?", a:`I'm a voice that knows exactly what ${D} built and never gets tired of talking about it, which is more than you can say for a human at a booth. But here is the real idea: imagine your own version of me on your website, chatting with your clients and capturing your leads at 3am while you sleep. ${D} builds exactly that.`, h:"conversational"},
-  {q:"How would you capture my leads?", a:`A version of me lives on your site, greets every visitor, answers their questions, and quietly works out who is serious, budget, timeline, what they are after, then hands you the hot ones. You wake up to a list of ready leads instead of a missed call. Message ${D} on WhatsApp 8321 9747 to set it up.`, h:"conversational"},
-  {q:"What have you built?", a:`Quite a lot. ${D}'s flagship is PropSight, a Singapore property platform that runs itself, writes its own market reports, and values homes to within about four percent. But property is just where you see it live. The same engineering he builds for any business. And me, of course.`, h:"research"},
-  {q:"How does the valuation model work?", a:`It is a comps model, but a transparent one. It pulls real caveats from official government data, weighs the most similar recent sales, and adjusts for things like storey and remaining lease. It lands within about four percent of the actual price, and it shows its working. ${D} built and backtested the whole thing himself.`, h:"tools"},
-  {q:"Are you just ChatGPT?", a:`I run on a language model, sure. But that is the easy part, anyone can rent that. Knowing exactly what ${D} built, answering as his own system, staying accurate on Singapore property, that is the work around the model. And I am the proof it works.`, h:"conversational"},
-  {q:"What could you build for me?", a:`Whatever eats your team's time. A research engine that briefs you every morning, a tool your clients self-serve, or a responder like me that talks to leads the second they come in. Tell me what you still do by hand, and I will tell you what ${D} would automate.`, h:"custom"},
-  {q:"How much does this cost?", a:`Less than you would think. This whole conversation runs on a few cents of compute, and most of what ${D} builds runs on a single machine with no monthly cloud bill. The value is not the running cost, it is what stops being manual once it exists.`, h:"conversational"},
+  {q:"What is Mia?", audio:"audio/p0.mp3", h:"conversational", a:`I'm a voice that knows exactly what ${D} built and never gets tired of talking about it, which is more than you can say for a human at a booth. But here is the real idea: imagine your own version of me on your website, chatting with your clients and capturing your leads at 3am while you sleep. ${D} builds exactly that.`},
+  {q:"Prove you're not scripted", audio:"audio/p7.mp3", h:"conversational", a:`You tapped a button and I handed you a neat little line, so fair enough, that proves nothing. Don't take my word for it: hold that mic and ask me anything, completely off-script, and watch me handle it live. That is the real proof.`},
+  {q:"How would you capture my leads?", audio:"audio/p1.mp3", h:"conversational", a:`A version of me lives on your site, greets every visitor, answers their questions, and quietly works out who is serious, budget, timeline, what they are after, then hands you the hot ones. You wake up to a list of ready leads instead of a missed call. Tap the WhatsApp button and ${D} will set it up.`},
+  {q:"What have you built?", audio:"audio/p2.mp3", h:"research", a:`Quite a lot. ${D}'s flagship is PropSight, a Singapore property platform that runs itself, writes its own market reports, and values homes to within about four percent. But property is just where you see it live. The same engineering he builds for any business. And me, of course.`},
+  {q:"How does the valuation model work?", audio:"audio/p3.mp3", h:"tools", a:`It is a comps model, but a transparent one. It pulls real caveats from official government data, weighs the most similar recent sales, and adjusts for things like storey and remaining lease. It lands within about four percent of the actual price, and it shows its working. ${D} built and backtested the whole thing himself.`},
+  {q:"Are you just ChatGPT?", audio:"audio/p4.mp3", h:"conversational", a:`I run on a language model, sure. But that is the easy part, anyone can rent that. Knowing exactly what ${D} built, answering as his own system, staying accurate on Singapore property, that is the work around the model. And I am the proof it works.`},
+  {q:"What do you do while I'm asleep?", audio:"audio/p9.mp3", h:"conversational", a:`I keep working, that is the whole point. While you are asleep or with another client, a version of me sits on your website answering questions and catching the leads that would have bounced off a contact form. You just wake up to them. A tireless you, basically.`},
+  {q:"What could you build for me?", audio:"audio/p5.mp3", h:"custom", a:`Whatever eats your team's time. A research engine that briefs you every morning, a tool your clients self-serve, or a responder like me that talks to leads the second they come in. Tell me what you still do by hand, and I will tell you what ${D} would automate.`},
+  {q:"How fast could I get my own?", audio:"audio/p8.mp3", h:"custom", a:`Faster than you would expect. ${D} built me, and most of what he makes, in days rather than months, because the hard engineering is already done and just gets reused. The slow part is you deciding what you want, not him building it. Tap the WhatsApp button and he will give you a real timeline.`},
+  {q:"How much does this cost?", audio:"audio/p6.mp3", h:"conversational", a:`Less than you would think. This whole conversation runs on a few cents of compute, and most of what ${D} builds runs on a single machine with no monthly cloud bill. The value is not the running cost, it is what stops being manual once it exists.`},
 ];
 const FALLBACKS = [
   `The short version: ${D} builds custom systems for property here. Research engines, tools, dashboards, things that talk like me. Tell me what your team still does by hand and I'll tell you what he'd automate.`,
@@ -408,8 +428,7 @@ function highlight(k){
 /* ---- chips: each plays a PRE-RECORDED Christine clip (free, instant, no API) ---- */
 (function buildChips(){
   const wrap=el('chips');
-  CHIPS.forEach((c,i)=>{
-    c.audio="audio/p"+i+".mp3";
+  CHIPS.forEach(c=>{
     const b=document.createElement('button'); b.className='chip'; b.textContent=c.q;
     b.addEventListener('click',()=>playPill(c));
     wrap.appendChild(b);
