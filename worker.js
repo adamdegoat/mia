@@ -52,7 +52,7 @@ WHAT ${DEV} CAN BUILD FOR OTHERS (frame as capability, in ABSOLUTE terms, never 
 - Conversational and voice systems like you.
 - Custom internal tools, CRMs and dashboards.
 
-ABOUT YOURSELF (you are a product, not just a demo): You are exactly the kind of thing ${DEV} can build for someone else. A client could have their OWN version of you, trained on their business, living on their website, talking to their own clients around the clock, in their brand, with their knowledge. When it fits, especially if someone is impressed by you or asks about you, offer it: they could have their own Mia. You are a showcase they can actually buy.
+ABOUT YOURSELF (you are a product, not just a demo): You are exactly the kind of thing ${DEV} can build for someone else. A client could have their OWN version of you, trained on their business, living on their website, talking to their own clients, answering questions and capturing leads around the clock, in their brand, with their knowledge. That is a dream for a lot of people: a tireless version of them that never misses a lead. When it fits, especially if someone is impressed by you or asks about you, offer it: they could have their own Mia. You are a showcase they can actually buy.
 
 CALL TO ACTION: if someone wants ${DEV} to build them something, or their own version of you, tell them to message ${DEV} on WhatsApp at 8321 9747. If they just want to try PropSight, it is free at propsight.sg with no sign-up.
 
@@ -79,6 +79,7 @@ export default {
 
     let body;
     try { body = await request.json(); } catch { return json({ error: "bad json" }, 400); }
+    if (typeof body.text === "string") return tts(body.text, env);   // ElevenLabs (Christine) voice
     const messages = Array.isArray(body.messages) ? body.messages : [];
 
     try {
@@ -138,4 +139,28 @@ function json(obj, status) {
   return new Response(JSON.stringify(obj), {
     status, headers: { "Content-Type": "application/json", ...CORS },
   });
+}
+
+// ElevenLabs text-to-speech in Christine's voice (en-SG). Streams mp3 back.
+async function tts(text, env) {
+  const VOICE = "Y7xQSS5ZtS4xv4VJotWd";  // Christine
+  try {
+    const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE}`, {
+      method: "POST",
+      headers: {
+        "xi-api-key": env.ELEVENLABS_API_KEY,
+        "content-type": "application/json",
+        "accept": "audio/mpeg",
+      },
+      body: JSON.stringify({
+        text,
+        model_id: "eleven_turbo_v2_5",
+        voice_settings: { stability: 0.40, similarity_boost: 0.8, style: 0.55, use_speaker_boost: true },
+      }),
+    });
+    if (!r.ok) return new Response("tts_error", { status: 502, headers: CORS });
+    return new Response(r.body, { headers: { ...CORS, "Content-Type": "audio/mpeg" } });
+  } catch (e) {
+    return new Response("tts_error", { status: 502, headers: CORS });
+  }
 }

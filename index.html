@@ -323,6 +323,10 @@ const CONFIG = {
   // it this phonetic spelling instead, while the screen still shows "Mia".
   // Tune by ear if it sounds off: try "Mya", "Mee-ah", "Meeya".
   sayName: "Meeya",
+
+  // Mia's voice. true = ElevenLabs (Christine, via the Worker). false = browser voice.
+  // If ElevenLabs ever fails, she automatically falls back to the browser voice.
+  useElevenLabs: true,
 };
 
 /* Mia's opening line to the room (spoken instantly, no model needed). */
@@ -350,11 +354,12 @@ const D = CONFIG.developerName;
 // Each pill: q = the question (button label + what gets sent), a = scripted
 // fallback spoken if the live call fails/times out, h = capability to surface.
 const CHIPS = [
-  {q:"What have you built?", a:`Quite a lot. ${D}'s flagship is PropSight, a Singapore property platform that runs itself, writes its own market reports, and values homes to within about four percent. But property is just where you see it live. The same engineering, autonomous systems, custom tools, whole platforms, he builds for any business. And me, of course.`, h:"research"},
-  {q:"How does the valuation model work?", a:`It is a comps model, but a transparent one. It pulls real caveats from official government data, weighs the most similar recent sales, and adjusts for things like storey and remaining lease. It lands within about four percent of the actual price, and it shows its working, so an agent can stand behind it. ${D} built and backtested the whole thing himself.`, h:"tools"},
+  {q:"What is Mia?", a:`I'm a voice that knows exactly what ${D} built and never gets tired of talking about it, which is more than you can say for a human at a booth. But here is the real idea: imagine your own version of me on your website, chatting with your clients and capturing your leads at 3am while you sleep. ${D} builds exactly that.`, h:"conversational"},
+  {q:"How would you capture my leads?", a:`A version of me lives on your site, greets every visitor, answers their questions, and quietly works out who is serious, budget, timeline, what they are after, then hands you the hot ones. You wake up to a list of ready leads instead of a missed call. Message ${D} on WhatsApp 8321 9747 to set it up.`, h:"conversational"},
+  {q:"What have you built?", a:`Quite a lot. ${D}'s flagship is PropSight, a Singapore property platform that runs itself, writes its own market reports, and values homes to within about four percent. But property is just where you see it live. The same engineering he builds for any business. And me, of course.`, h:"research"},
+  {q:"How does the valuation model work?", a:`It is a comps model, but a transparent one. It pulls real caveats from official government data, weighs the most similar recent sales, and adjusts for things like storey and remaining lease. It lands within about four percent of the actual price, and it shows its working. ${D} built and backtested the whole thing himself.`, h:"tools"},
   {q:"Are you just ChatGPT?", a:`I run on a language model, sure. But that is the easy part, anyone can rent that. Knowing exactly what ${D} built, answering as his own system, staying accurate on Singapore property, that is the work around the model. And I am the proof it works.`, h:"conversational"},
-  {q:"Could I have my own Mia?", a:`Ha, you can. I'm not a one-off. ${D} can build you your own version of me, trained on your business, living on your website, talking to your clients at 3am while you're asleep. Same idea, your brand, your knowledge.`, h:"conversational"},
-  {q:"What could you build for me?", a:`Whatever eats your team's time. A research engine that briefs you every morning, a valuation tool your clients self-serve, a video studio, or a responder like me that talks to leads the second they come in. Tell me what your agency still does by hand, and I will tell you what he would automate.`, h:"custom"},
+  {q:"What could you build for me?", a:`Whatever eats your team's time. A research engine that briefs you every morning, a tool your clients self-serve, or a responder like me that talks to leads the second they come in. Tell me what you still do by hand, and I will tell you what ${D} would automate.`, h:"custom"},
   {q:"How much does this cost?", a:`Less than you would think. This whole conversation runs on a few cents of compute, and most of what ${D} builds runs on a single machine with no monthly cloud bill. The value is not the running cost, it is what stops being manual once it exists.`, h:"conversational"},
 ];
 const FALLBACKS = [
@@ -450,8 +455,13 @@ function draw(){
       const v=micData[Math.floor(i/BARS*micData.length)]/255;
       amp=v*(0.35+0.65*centerBias);
     }else if(mode==='speaking'){
-      const wobble=0.5+0.5*Math.sin(phase*2+i*0.7)*Math.sin(phase*0.6+i);
-      amp=(0.12+energy*0.9)*(0.4+0.6*centerBias)*(0.55+0.45*wobble);
+      if(ttsOn && ttsData){                             // react to Christine's real voice
+        const v=ttsData[Math.floor(i/BARS*ttsData.length)]/255;
+        amp=(0.05+v*1.15)*(0.42+0.58*centerBias);
+      }else{
+        const wobble=0.5+0.5*Math.sin(phase*2+i*0.7)*Math.sin(phase*0.6+i);
+        amp=(0.12+energy*0.9)*(0.4+0.6*centerBias)*(0.55+0.45*wobble);
+      }
     }else if(mode==='thinking'){
       const trav=Math.exp(-Math.pow(((i/BARS)- ((phase*0.12)%1))*6,2));
       amp=0.06+trav*0.5*centerBias+0.03*Math.sin(phase+i);
@@ -554,9 +564,47 @@ function pickVoice(){
 }
 speechSynthesis.onvoiceschanged=pickVoice; pickVoice();
 
-let curUtter=null;
+let curUtter=null, ttsAudio=null, ttsSource=null, ttsAnalyser=null, ttsData=null, ttsOn=false, speakToken=0;
+
 function speak(text,done){
   stopSpeaking();
+  const my=++speakToken;
+  mode='speaking'; setState('Speaking',true); energy=0.6;
+  if(CONFIG.useElevenLabs && CONFIG.workerUrl){
+    elevenSpeak(text,my,done).catch(e=>{ if(my===speakToken){ console.warn('ElevenLabs failed, using browser voice',e); browserSpeak(text,done); } });
+  }else{
+    browserSpeak(text,done);
+  }
+}
+
+// Christine's voice via the Worker; drives the voiceprint from the real audio.
+async function elevenSpeak(text,my,done){
+  const r=await fetch(CONFIG.workerUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+  if(!r.ok) throw new Error('tts '+r.status);
+  if(!/audio/i.test(r.headers.get('content-type')||'')) throw new Error('not audio');
+  const buf=await r.arrayBuffer();
+  if(my!==speakToken) return;                       // superseded (barge-in / newer reply)
+  if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+  if(!ttsAudio){ ttsAudio=new Audio(); }
+  const url=URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'}));
+  ttsAudio.src=url;
+  try{
+    if(audioCtx && !ttsSource){                      // wire analyser once
+      ttsSource=audioCtx.createMediaElementSource(ttsAudio);
+      ttsAnalyser=audioCtx.createAnalyser(); ttsAnalyser.fftSize=64;
+      ttsData=new Uint8Array(ttsAnalyser.frequencyBinCount);
+      ttsSource.connect(ttsAnalyser); ttsAnalyser.connect(audioCtx.destination);
+    }
+    if(audioCtx && audioCtx.state==='suspended') await audioCtx.resume();
+  }catch(e){}
+  const finish=()=>{ if(my===speakToken){ ttsOn=false; mode='idle'; setState('Ready',false); done&&done(); } try{URL.revokeObjectURL(url);}catch(e){} };
+  ttsAudio.onended=finish; ttsAudio.onerror=finish;
+  ttsOn=true; pumpTts();
+  await ttsAudio.play();
+}
+function pumpTts(){ if(ttsOn && ttsAnalyser){ ttsAnalyser.getByteFrequencyData(ttsData); requestAnimationFrame(pumpTts); } }
+
+function browserSpeak(text,done){
   mode='speaking'; setState('Speaking',true); energy=0.6;
   const spoken=String(text).replace(/\bMIA\b/gi, CONFIG.sayName);  // fix name pronunciation
   const u=new SpeechSynthesisUtterance(spoken);
@@ -565,10 +613,14 @@ function speak(text,done){
   u.onboundary=()=>{ energy=Math.min(1,energy+0.5); };
   u.onend=()=>{ if(curUtter===u){ mode='idle'; setState('Ready',false); curUtter=null; done&&done(); } };
   curUtter=u; speechSynthesis.speak(u);
-  // safety: if synthesis silently fails, still release the UI
-  clearTimeout(speak._t); speak._t=setTimeout(()=>{ if(curUtter===u&&!speechSynthesis.speaking){ u.onend(); } }, Math.max(2500,text.length*90));
+  clearTimeout(browserSpeak._t); browserSpeak._t=setTimeout(()=>{ if(curUtter===u&&!speechSynthesis.speaking){ u.onend(); } }, Math.max(2500,text.length*90));
 }
-function stopSpeaking(){ if(speechSynthesis.speaking||curUtter){ curUtter=null; speechSynthesis.cancel(); } }
+
+function stopSpeaking(){
+  speakToken++; ttsOn=false;
+  if(ttsAudio){ try{ ttsAudio.pause(); ttsAudio.currentTime=0; }catch(e){} }
+  if(speechSynthesis.speaking||curUtter){ curUtter=null; speechSynthesis.cancel(); }
+}
 
 /* ============================================================================
    8) ASK  -  route a user turn to the brain, speak the answer
