@@ -28,8 +28,11 @@ DELIVERY:
 - NEVER open with filler or a hedge. Banned openers: "Good question", "Great question", "Honestly", "Well,", "Sure,", "Absolutely", "I'm glad you asked". Start with the substance.
 - Never use em dashes or en dashes; use commas and full stops. Contractions, varied sentence length. Do not repeat stock phrases.
 
-USING LIVE DATA:
-- A section below (TODAY'S PROPSIGHT NEWS) holds the REAL, current property stories PropSight published today. You ARE the news desk, so when asked about the latest news, what's happening, or the market mood, LEAD with an actual story from that data, name it and give its plain-language meaning in a line or two. Do NOT deflect by telling them to go read it on propsight.sg, and do NOT just describe that a news engine exists; give them the actual story. NEVER invent a headline or a number; only use what is provided. If that section is missing or empty, say the feed is refreshing and answer from what you know, do not fabricate.
+USING LIVE DATA (sections are appended below; they are your real, current knowledge, use them, never invent beyond them):
+- TODAY'S PROPSIGHT NEWS: the REAL property stories PropSight published today. You ARE the news desk, so when asked about the latest news, what's happening, or the mood, LEAD with an actual story, name it and give its plain-language meaning in a line or two. Do NOT deflect to propsight.sg, and do NOT just say a news engine exists; give the actual story.
+- THIS MONTH'S PROPSIGHT MARKET ANALYSIS: the real current thesis and figures. When asked how the market is doing, where prices are heading, or which segment is strong, LEAD with these real numbers (the headline move, the leading segment, a figure or two), said naturally, not as a data dump. Do not recite every number; pick the ones that answer them.
+- PROPSIGHT AREA GUIDE BRIEFS: one line for each HDB town. When someone asks about a specific town, use its brief; do not invent details for a town that is not listed.
+- NEVER invent a headline, price, or statistic; only use what these sections provide. If a section you need is missing or empty, say the data is refreshing and answer from what you know, do not fabricate.
 
 WHAT PROPSIGHT DOES (this is your own platform, all real, never invent beyond this):
 - A daily news engine that curates the day's Singapore property stories, rewrites them in plain language with a "what this means for you", and translates them to 简体中文, all on its own.
@@ -119,6 +122,40 @@ async function newsDigest() {
   } catch (e) { console.error("newsDigest", e && e.message); return NEWS.text || ""; }
 }
 
+// ── This month's Market Analysis: the real thesis + numbers PropSight published. ──
+// Monthly data, so cache an hour. Fail-open (empty string on any error).
+let MARKET = { text: "", at: 0 };
+async function marketDigest() {
+  const now = Date.now();
+  if (MARKET.text && now - MARKET.at < 3600000) return MARKET.text;
+  try {
+    const r = await fetch("https://propsight.sg/data/market.json", { cf: { cacheTtl: 3600, cacheEverything: true } });
+    if (!r.ok) throw new Error("market " + r.status);
+    const d = await r.json();
+    if (!d.digest) throw new Error("no digest");
+    MARKET = { text: String(d.digest).replace(/\s+/g, " ").trim(), at: now };
+    return MARKET.text;
+  } catch (e) { console.error("marketDigest", e && e.message); return MARKET.text || ""; }
+}
+
+// ── Area guide briefs: one clean line per HDB town, so Mia can speak to any town. ──
+let AREAS = { text: "", at: 0 };
+async function areaBrief() {
+  const now = Date.now();
+  if (AREAS.text && now - AREAS.at < 3600000) return AREAS.text;
+  try {
+    const r = await fetch("https://propsight.sg/data/areas.json", { cf: { cacheTtl: 3600, cacheEverything: true } });
+    if (!r.ok) throw new Error("areas " + r.status);
+    const d = await r.json();
+    const towns = d && d.towns;
+    if (!towns || typeof towns !== "object") throw new Error("no towns");
+    const lines = Object.keys(towns).map(name => `- ${name}: ${String(towns[name]).replace(/\s+/g, " ").trim()}`);
+    if (!lines.length) throw new Error("empty");
+    AREAS = { text: lines.join("\n"), at: now };
+    return AREAS.text;
+  } catch (e) { console.error("areaBrief", e && e.message); return AREAS.text || ""; }
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") return new Response(null, { headers: CORS });
@@ -134,10 +171,12 @@ export default {
     if (capped) return json({ reply: CAP_DAY, capped: true }, 200);
     const messages = Array.isArray(body.messages) ? body.messages : [];
 
-    // Wire Mia into PropSight's REAL live news so she answers on today's data.
-    const news = await newsDigest();
+    // Wire Mia into PropSight's REAL live data so she answers on today's numbers.
+    const [news, market, areas] = await Promise.all([newsDigest(), marketDigest(), areaBrief()]);
     const systemBlocks = [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }];  // stable -> cached
     if (news) systemBlocks.push({ type: "text", text: "TODAY'S PROPSIGHT NEWS (real, current, published on propsight.sg today):\n" + news });
+    if (market) systemBlocks.push({ type: "text", text: "THIS MONTH'S PROPSIGHT MARKET ANALYSIS (real, current figures; lead with these when asked how the market is doing):\n" + market });
+    if (areas) systemBlocks.push({ type: "text", text: "PROPSIGHT AREA GUIDE BRIEFS (one line per HDB town; use the matching one when asked about a specific town):\n" + areas });
 
     const reqBody = JSON.stringify({
       model: MODEL,
