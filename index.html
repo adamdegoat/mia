@@ -190,6 +190,18 @@ footer{
 .ptt:focus-visible{outline:2px solid var(--ember-2);outline-offset:3px}
 .hint{font-size:12px;color:var(--muted-2);letter-spacing:.02em;flex:0 0 auto}
 .hint b{color:var(--muted);font-weight:400}
+/* composer: mic OR type */
+.composer{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;width:100%}
+.cor{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted-2);flex:0 0 auto}
+.tin{flex:1 1 240px;min-width:0;max-width:400px;background:rgba(242,237,230,.05);border:1px solid var(--line-2);
+  border-radius:999px;padding:13px 18px;color:var(--text);font-family:"Space Grotesk";font-size:15px;transition:border-color .2s ease}
+.tin::placeholder{color:var(--muted-2)}
+.tin:focus{outline:none;border-color:var(--ember)}
+.send{flex:0 0 auto;width:46px;height:46px;border-radius:50%;border:0;background:var(--ember);color:#160a04;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:background .2s ease}
+.send:hover{background:var(--ember-2)}
+.send:focus-visible{outline:2px solid var(--ember-2);outline-offset:3px}
+.send svg{width:20px;height:20px}
 .chips{display:flex;flex-direction:column;align-items:center;gap:15px;width:100%;flex:1 1 100%;margin:4px 0 0}
 .chipgroup{min-width:0;width:100%}
 .cglbl{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted-2);margin-bottom:9px;text-align:center}
@@ -281,6 +293,9 @@ footer{
   .history{display:none}
   .ptt{order:1;flex:1 1 auto;justify-content:center}
   .hint{display:none}
+  .cor{display:none}                 /* the "or" reads orphaned once the bar wraps on phones */
+  .composer{gap:10px}
+  .tin{flex:1 1 auto}
   .chips{order:2;margin-left:0;width:100%;flex-wrap:wrap}   /* ALL pills visible, no hidden sideways scroll */
   .chip{flex:0 0 auto;padding:11px 16px;font-size:13.5px}   /* comfier ~44px tap target on phones */
   .status .tc{display:none}
@@ -326,11 +341,17 @@ footer{
     </section>
 
   <footer>
-    <button class="ptt" id="ptt" aria-label="Hold to speak">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
-      <span>Hold to speak</span>
-    </button>
-    <div class="hint"><b>or</b> hold <b>spacebar</b></div>
+    <div class="composer">
+      <button class="ptt" id="ptt" aria-label="Hold to speak">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+        <span>Hold to speak</span>
+      </button>
+      <span class="cor mono">or</span>
+      <input class="tin" id="tin" type="text" placeholder="type your question" autocomplete="off" enterkeyhint="send" aria-label="Type your question">
+      <button class="send" id="tsend" aria-label="Send">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+      </button>
+    </div>
     <div class="chips" id="chips"></div>
   </footer>
 </div>
@@ -757,8 +778,20 @@ ptt.addEventListener('pointerdown',down);
 ptt.addEventListener('pointerup',up);
 ptt.addEventListener('pointerleave',()=>{ if(mode==='listening'){ptt.classList.remove('holding');endListen();} });
 let spaceHeld=false;
-window.addEventListener('keydown',e=>{ if(e.code==='Space'&&!spaceHeld&&started){ e.preventDefault(); if(!readyToTalk())return; spaceHeld=true;ptt.classList.add('holding');startListen(); }});
+const typingNow=()=>{ const a=document.activeElement; return a && (a.tagName==='INPUT' || a.tagName==='TEXTAREA'); };
+window.addEventListener('keydown',e=>{ if(e.code==='Space'&&!spaceHeld&&started&&!typingNow()){ e.preventDefault(); if(!readyToTalk())return; spaceHeld=true;ptt.classList.add('holding');startListen(); }});
 window.addEventListener('keyup',e=>{ if(e.code==='Space'&&spaceHeld){ e.preventDefault();spaceHeld=false;ptt.classList.remove('holding');endListen(); }});
+
+/* text input: type instead of talk - 100% reliable, no mic needed, works everywhere */
+const tin=el('tin');
+function sendTyped(){
+  const t=(tin.value||'').trim(); if(!t||!started) return;
+  tin.value='';
+  if(busy){ stopSpeaking(); busy=false; }   // interrupt whatever's happening, then answer
+  ask(t);
+}
+el('tsend').addEventListener('click',sendTyped);
+tin.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); sendTyped(); } });
 
 /* ============================================================================
    7) VOICE OUT  -  browser speech synthesis
