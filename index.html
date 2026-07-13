@@ -207,7 +207,23 @@ footer{
 .ptt:focus-visible{outline:2px solid var(--ember-2);outline-offset:3px}
 .hint{font-size:12px;color:var(--muted-2);letter-spacing:.02em;flex:0 0 auto}
 .hint b{color:var(--muted);font-weight:400}
-.chips{display:flex;gap:9px;flex-wrap:wrap;margin-left:auto}
+.chips{display:flex;flex-direction:column;gap:13px;width:100%;flex:1 1 100%;margin:4px 0 0}
+.cglbl{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted-2);margin-bottom:8px}
+.chiprow{display:flex;gap:8px;flex-wrap:wrap}
+.leadbox{display:flex;flex-direction:column;gap:10px;overflow:hidden;min-height:0}
+.leadempty{font-size:13.5px;line-height:1.55;color:var(--muted-2);margin:0;max-width:30ch}
+.leadcard{border:1px solid var(--line-2);border-radius:12px;padding:13px 15px;background:var(--ink-2);
+  animation:leadin .38s cubic-bezier(.2,.7,.2,1)}
+.leadcard:first-child{border-color:rgba(255,106,43,.32)}
+@keyframes leadin{from{transform:translateY(-12px);background:rgba(255,106,43,.10)}to{transform:none}}
+.lhead{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ember);margin-bottom:8px}
+.lwho{font-size:16px;font-weight:600}
+.lnote{font-size:13.5px;color:var(--muted);margin-top:3px;line-height:1.4}
+.lfoot{display:flex;justify-content:space-between;align-items:center;margin-top:11px;gap:10px}
+.lmeta{font-size:12px;color:var(--muted-2)}
+.ltag{font-family:"Space Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:999px;border:1px solid}
+.ltag.hot{color:var(--ember);border-color:rgba(255,106,43,.5)}
+.ltag.warm{color:var(--muted);border-color:var(--line-2)}
 .chip{
   appearance:none;cursor:pointer;
   background:transparent;border:1px solid var(--line-2);color:var(--muted);
@@ -314,8 +330,10 @@ footer{
     </section>
 
     <aside class="panel">
-      <h2 id="panelTitle">What he builds</h2>
-      <div class="caps" id="caps"></div>
+      <h2 id="panelTitle">Caught for you</h2>
+      <div class="leadbox" id="leadbox">
+        <p class="leadempty" id="leadempty">Ask Mia like a buyer or seller. The leads she catches land here, the way they would while you sleep.</p>
+      </div>
     </aside>
 
   <footer>
@@ -396,16 +414,16 @@ const D = CONFIG.developerName;
 // Each pill: q = the question (button label + what gets sent), a = scripted
 // fallback spoken if the live call fails/times out, h = capability to surface.
 const CHIPS = [
-  {q:"What is Mia?", audio:"audio/p0.mp3", h:"conversational", a:`I'm a voice that knows exactly what Adam built, and never gets tired of talking about it, which is more than you can say for a human at a booth. But here's the real idea: imagine your own version of me on your website, chatting with your clients, and capturing your leads at three in the morning, while you sleep. Adam builds exactly that.`},
-  {q:"Prove you're not scripted", audio:"audio/p7.mp3", h:"conversational", a:`You tapped a button, and I handed you a neat little line, so fair enough, that proves nothing. Don't take my word for it: hold that mic and ask me anything, completely off-script, and watch me handle it live. That's the real proof.`},
-  {q:"How would you capture my leads?", audio:"audio/p1.mp3", h:"conversational", a:`A version of me lives on your site, greets every visitor, answers their questions, and quietly works out who's serious, budget, timeline, what they're after, then hands you the hot ones. You wake up to a list of ready leads, instead of a missed call. Tap the WhatsApp button, and Adam will set it up.`},
-  {q:"What do you do while I'm asleep?", audio:"audio/p9.mp3", h:"conversational", a:`I keep working, that's the whole point. While you're asleep, or with another client, a version of me sits on your website, answering questions and catching the leads that would've bounced off a contact form. You just wake up to them. A tireless you, basically.`},
-  {q:"What have you built?", audio:"audio/p2.mp3", h:"research", a:`Quite a lot. The flagship is PropSight, a Singapore property platform that runs itself, writes its own market reports, and values homes to within about four percent. But it goes wider than property: smart CRMs that sort and chase your leads on their own, dashboards that run a business end to end, research engines that brief you every morning, and voices like me. Property's just where you see it live. The same engineering works anywhere.`},
-  {q:"How does the valuation model work?", audio:"audio/p3.mp3", h:"tools", a:`It's a comps model, but a transparent one. It pulls real caveats from official government data, weighs the most similar recent sales, and adjusts for things like storey, and remaining lease. It lands within about four percent of the actual price, and it shows its working. Adam built it, and backtested the whole thing, himself.`},
-  {q:"Are you just ChatGPT?", audio:"audio/p4.mp3", h:"conversational", a:`I run on a language model, sure. But that's the easy part, anyone can rent that. Knowing exactly what Adam built, answering as his own system, staying accurate on Singapore property, that's the work around the model. And I'm the proof it works.`},
-  {q:"What could you build for me?", audio:"audio/p5.mp3", h:"custom", a:`Whatever eats your team's time. A smart CRM that sorts and follows up your leads for you, a research engine that briefs you every morning, a tool your clients self-serve, or a responder like me that talks to leads the second they come in. Tell me what you still do by hand, and I'll tell you what Adam would automate.`},
-  {q:"How fast could I get my own?", audio:"audio/p8.mp3", h:"custom", a:`Faster than you'd expect. Adam builds things like me in days, not months, because he works fast, and he's done the hard parts many times over. The slow bit is usually you deciding exactly what you want, not him building it. Tap the WhatsApp button, and he'll give you a real timeline.`},
-  {q:"Who is Adam?", audio:"audio/p6.mp3", h:"custom", a:`Adam's the developer behind all of this, including me. One person built the property platform, the valuation model, the voice, everything you're seeing here. He makes custom systems for any business, and property's just where he proved it. Tap the WhatsApp button to talk to him.`},
+  {q:"How much can I afford?", audio:"audio/b0.mp3", g:"buyer", a:`That comes down to two things, your income, and what you already owe. The bank caps your total monthly repayments at fifty five percent of your income, and for an HDB flat it's tighter, thirty percent. They also test you at four percent interest, not today's rate, so you're safe if rates climb. Tell me your income and any car or personal loans, and I'll work out a real ceiling for you.`, lead:{who:"Buyer", note:"Checking what they can afford", meta:"Pre qualified on income", tag:"Hot", time:"11:42 pm"}},
+  {q:"What's the ABSD on a second home?", audio:"audio/b1.mp3", g:"buyer", a:`For a Singapore citizen buying a second home, it's twenty percent of the price, on top of the usual buyer's stamp duty. A third property is thirty. Here's the part people miss, if you're selling your first home, a married couple can claim that twenty percent back, as long as you sell within six months. Get the timing wrong and it's real money, so it's worth planning.`, lead:{who:"Buyer", note:"Planning stamp duty on a second home", meta:"Timing a sale for the refund", tag:"Warm", time:"1:07 am"}},
+  {q:"What costs come on top of the price?", audio:"audio/b2.mp3", g:"buyer", a:`More than most people budget for. There's buyer's stamp duty, one to six percent depending on price, legal fees, a valuation, and on a resale, the option fee. If it's a second property, add the extra stamp duty on top. A safe rule is to set aside a few percent of the price for everything that isn't the price itself. I can total yours to the dollar.`, lead:{who:"Buyer", note:"Totalling the costs on top of price", meta:"Doing the real math", tag:"Warm", time:"9:24 pm"}},
+  {q:"Is now a good time to buy?", audio:"audio/b3.mp3", g:"buyer", a:`That's the honest one, and anyone who gives you a flat yes or no is guessing. What I can do is pull the recent sale prices for the area you want, show you which way they're moving, and flag if a place is priced above or below its neighbours. Then you decide with real numbers, not a hunch. Tell me the area, and I'll get it ready.`, lead:{who:"Buyer", note:"Ready when the numbers line up", meta:"Wants area price data", tag:"Hot", time:"2:15 am"}},
+  {q:"What's my place worth?", audio:"audio/s0.mp3", g:"seller", a:`I can get you close. I pull the recent sales of homes like yours, same size, same area, same age, and weigh the most similar ones, the way a valuer would. For a typical flat that lands within a few percent of the real price. Give me your block and unit type, and I'll draft you a range, off actual caveats, not guesswork.`, lead:{who:"Seller", note:"Wants their place valued", meta:"Thinking of listing", tag:"Hot", time:"11:58 pm"}},
+  {q:"Should I sell now or wait?", audio:"audio/s1.mp3", g:"seller", a:`It depends on when you bought, and what it is. On a private home, if you've held it under four years, there's a seller's stamp duty, sixteen percent in the first year, easing down to nothing by the fourth. An HDB flat has a five year minimum before you can sell at all. So the timing can cost you, or save you, real money. Tell me your dates, and I'll place you exactly.`, lead:{who:"Seller", note:"Checking stamp duty before selling", meta:"Timing the sale", tag:"Warm", time:"12:40 am"}},
+  {q:"What do I pay when I sell?", audio:"audio/s2.mp3", g:"seller", a:`If you're still inside the seller's stamp duty window, that's the big one, up to sixteen percent on a private home sold within a year. Then your agent's commission, and the legal fees. If there's still a loan on it, that's settled from the sale. Tell me when you bought and what you owe, and I'll work out what you'd actually walk away with.`, lead:{who:"Seller", note:"Planning what they'd net", meta:"Getting sale ready", tag:"Warm", time:"10:11 pm"}},
+  {q:"What is Mia?", audio:"audio/p0.mp3", g:"about", a:`I'm a voice that knows exactly what Adam built, and never gets tired of talking about it, which is more than you can say for a human at a booth. But here's the real idea: imagine your own version of me on your website, chatting with your clients, and capturing your leads at three in the morning, while you sleep. Adam builds exactly that.`},
+  {q:"Prove you're not scripted", audio:"audio/p7.mp3", g:"about", a:`You tapped a button, and I handed you a neat little line, so fair enough, that proves nothing. Don't take my word for it: hold that mic and ask me anything, completely off-script, and watch me handle it live. That's the real proof.`},
+  {q:"What could Adam build for me?", audio:"audio/p5.mp3", g:"about", a:`Whatever eats your team's time. A smart CRM that sorts and follows up your leads for you, a research engine that briefs you every morning, a tool your clients self-serve, or a responder like me that talks to leads the second they come in. Tell me what you still do by hand, and I'll tell you what Adam would automate.`},
 ];
 const FALLBACKS = [
   `The short version: ${D} builds custom systems for property here. Research engines, tools, dashboards, things that talk like me. Tell me what your team still does by hand and I'll tell you what he'd automate.`,
@@ -429,29 +447,39 @@ let kWords=[], kTimes=null, kCharCum=[], kActive=-1, kRAF=0;
 
 /* ---- header wordmark + panel reflect the real name ---- */
 el('mark').innerHTML = 'M<b>i</b>a';
-el('panelTitle').textContent = `What ${D} builds`;
+
 
 /* ---- capability panel ---- */
 const capNodes={};
-(function buildCaps(){
-  const wrap=el('caps');
-  CAP_ORDER.forEach(k=>{
-    const d=document.createElement('div'); d.className='cap';
-    d.innerHTML=`<div class="t">${CAPS[k].t}</div><div class="e">${CAPS[k].e}</div>`;
-    wrap.appendChild(d); capNodes[k]=d;
-  });
-})();
-function highlight(k){
-  CAP_ORDER.forEach(x=>capNodes[x].classList.toggle('on', x===k));
+/* panel repurposed to the lead inbox */
+function highlight(k){}   // panel repurposed to the lead inbox
+function addLead(l){
+  const box=el('leadbox'); if(!box) return;
+  const empty=el('leadempty'); if(empty) empty.style.display='none';
+  const card=document.createElement('div'); card.className='leadcard';
+  const tag=(l.tag||'').toLowerCase();
+  card.innerHTML='<div class="lhead mono"><span>New lead</span><span>'+l.time+'</span></div>'+
+    '<div class="lwho">'+l.who+'</div><div class="lnote">'+l.note+'</div>'+
+    '<div class="lfoot"><span class="lmeta">'+l.meta+'</span><span class="ltag '+tag+'">'+l.tag+'</span></div>';
+  box.insertBefore(card, box.firstChild);
+  requestAnimationFrame(function(){ card.classList.add('in'); });
+  const cards=box.querySelectorAll('.leadcard'); for(let i=4;i<cards.length;i++) cards[i].remove();
 }
 
 /* ---- chips: each plays a PRE-RECORDED Christine clip (free, instant, no API) ---- */
 (function buildChips(){
   const wrap=el('chips');
-  CHIPS.forEach(c=>{
-    const b=document.createElement('button'); b.className='chip'; b.textContent=c.q;
-    b.addEventListener('click',()=>playPill(c));
-    wrap.appendChild(b);
+  [["buyer","Ask as a buyer"],["seller","Ask as a seller"],["about","About Mia"]].forEach(function(pair){
+    const g=pair[0], label=pair[1];
+    const grp=document.createElement('div'); grp.className='chipgroup';
+    const lb=document.createElement('div'); lb.className='cglbl mono'; lb.textContent=label; grp.appendChild(lb);
+    const row=document.createElement('div'); row.className='chiprow';
+    CHIPS.filter(function(c){return c.g===g;}).forEach(function(c){
+      const b=document.createElement('button'); b.className='chip'; b.textContent=c.q;
+      b.addEventListener('click',function(){playPill(c);});
+      row.appendChild(b);
+    });
+    grp.appendChild(row); wrap.appendChild(grp);
   });
 })();
 
@@ -462,7 +490,7 @@ function playPill(pill){
   pushHistory('You',pill.q); convo.push({role:'user',content:pill.q});
   showNow('Mia',pill.a); pushHistory('Mia',pill.a);
   convo.push({role:'assistant',content:pill.a});
-  if(pill.h && CAPS[pill.h]) highlight(pill.h);
+  if(pill.lead) addLead(pill.lead);
   speakClip(pill.audio, pill.a, ()=>{ if(my===turn) busy=false; });
 }
 
