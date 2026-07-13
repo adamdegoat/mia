@@ -685,21 +685,24 @@ function pumpMic(){ if(mode==='listening'&&analyser){ analyser.getByteFrequencyD
 
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 let recog=null, heard='', recognizing=false;
-if(SR){
-  recog=new SR(); recog.lang='en-US'; recog.interimResults=true; recog.continuous=false;
-  recog.onresult=e=>{
-    let t=''; for(let i=e.resultIndex;i<e.results.length;i++) t+=e.results[i][0].transcript;
-    heard=t.trim(); if(heard) showNow('You',heard);
-  };
-  recog.onend=()=>{ recognizing=false; };
+// A FRESH recognizer every time: the browser's speech recognition often dies after one use
+// (esp. on phones), so reusing one instance is why the 2nd question sometimes did nothing.
+function makeRecog(){
+  if(!SR) return null;
+  const r=new SR(); r.lang='en-US'; r.interimResults=true; r.continuous=false;
+  r.onresult=e=>{ let t=''; for(let i=e.resultIndex;i<e.results.length;i++) t+=e.results[i][0].transcript; heard=t.trim(); if(heard) showNow('You',heard); };
+  r.onend=()=>{ recognizing=false; };
+  r.onerror=()=>{ recognizing=false; };
+  return r;
 }
 function startListen(){
-  if(busy||!started) return;
-  stopSpeaking();               // barge-in: cut Mia off if she was talking
+  if(!started) return;
   heard='';
   mode='listening'; setState('Listening',true);
   showNow('You','...');
   if(!analyser) initMic();      // open the mic lazily, only while holding to talk
+  try{ if(recog) recog.abort(); }catch(e){}   // discard any stale recognizer
+  recog=makeRecog();
   if(recog){ try{ recog.start(); recognizing=true; }catch(e){} }
   pumpMic();
 }
@@ -715,12 +718,12 @@ function endListen(){
 const ptt=el('ptt');
 function readyToTalk(){
   if(!started) return false;
-  if(mode==='speaking'){                 // barge-in: cut Mia off and take over
-    stopSpeaking(); busy=false;
-    document.querySelectorAll('.chip').forEach(c=>c.disabled=false);
-    return true;
-  }
-  return !busy;                          // ignore only while she is thinking
+  // Every new hold TAKES OVER: cancel whatever the previous turn was doing (talking, thinking,
+  // or wedged) and free the mic. This is why "the 2nd time nothing happened" - a stuck turn
+  // was blocking it. Now the mic can never be blocked.
+  stopSpeaking(); busy=false; turn++; mode='idle';
+  document.querySelectorAll('.chip').forEach(c=>c.disabled=false);
+  return true;
 }
 const down=e=>{ e.preventDefault(); if(!readyToTalk()) return; ptt.classList.add('holding'); startListen(); };
 const up=e=>{ e.preventDefault(); ptt.classList.remove('holding'); endListen(); };
