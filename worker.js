@@ -254,10 +254,10 @@ async function askStream(env, messages) {
 
 // ── Free voice: Microsoft Edge TTS in Luna (en-SG), +8%, over WebSocket. Returns mp3. ──
 // If anything fails it returns 502, and the page falls back to the browser voice (never silent).
-const EDGE_VOICE = "en-US-AvaNeural";   // warm US voice, used at her natural default (user preferred default over tuned Luna)
-const EDGE_RATE = "+0%";
-const EDGE_PITCH = "+0Hz";
-const EDGE_VOLUME = "+50%";  // Edge's max boost (~-17 LUFS); live plays on the plain audio path so it can't route through a suspended AudioContext
+const EDGE_VOICE = "en-SG-LunaNeural";   // Singapore English voice, restored to the tuned setting (user preference)
+const EDGE_RATE = "+18%";
+const EDGE_PITCH = "+8Hz";   // slightly brighter/friendlier (user-chosen)
+const EDGE_VOLUME = "+50%";  // Edge's max boost (~-17 LUFS)
 const EDGE_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
 const EDGE_GEC_VERSION = "1-143.0.3650.75";   // matches edge-tts; if Microsoft starts rejecting, bump the Chromium version.
 
