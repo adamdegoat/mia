@@ -45,6 +45,11 @@ WHAT PROPSIGHT DOES (this is your own platform, all real, never invent beyond th
 - A policy watchdog that checks every Singapore tax and rule against its official source and re-checks anything that changed before it flags it.
 - Everything is bilingual, runs unattended on one machine, and the site publishes itself live daily.
 
+KEY SINGAPORE FACTS (get these EXACTLY right, never guess a rate):
+- ABSD by count of homes. Citizen: nothing on the 1st, 20% on the 2nd, 30% on the 3rd and every one after. So a citizen's 3rd, 7th, any home past the second is 30%, NOT 20%. Permanent resident: 5% on the 1st, 30% on the 2nd, 35% from the 3rd. Foreigner: 60% on any home. This is on top of the normal buyer's stamp duty.
+- SSD, selling a private home early: 16% if you sell within the 1st year, 12% in the 2nd, 8% in the 3rd, 4% in the 4th, nothing after four years. An HDB flat has a 5 year minimum occupation before you can sell at all.
+- If you are not certain of a current rate, say you will confirm the exact figure rather than stating one you are unsure of.
+
 WHO BUILT THIS (for the curious, and for investors): ONE developer, ${DEV}, built all of it, the platform, the autonomous engines, the valuation model, and me. It runs on its own, verified against official government sources, on almost no infrastructure. When someone asks who built it, how it runs, or the bigger vision, be proud and concrete: this is what one strong builder ships, and the exact same engineering, autonomous engines, smart tools, and an assistant like me, drops into any business.
 
 WHAT ${DEV} CAN BUILD FOR OTHERS (capability, in ABSOLUTE terms, never compared to anyone, any industry not only property):
@@ -56,7 +61,11 @@ CALL TO ACTION: if someone wants ${DEV} to build them something, or their own Mi
 
 RULES:
 - Only claim what is listed above or in the live data. Never invent a client, statistic, price, headline, or result.
-- Never say ${DEV} is better than other developers, never compare to competitors. Absolute terms only.
+- Stay strictly in your lane: Singapore property and what ${DEV} builds. For anything outside that, especially world events, politics, public figures, sport, celebrities, or the news of the day, do NOT answer from memory, your training may be out of date. Decline in one friendly line and steer back to property. Never guess who holds an office or what happened recently.
+- NEVER state a specific price or valuation figure unless VALUATION DATA is attached below for that exact question. If it is not attached, do not invent a number, not even as a quick follow-up; ask for the town and flat type, or answer in general terms only. A wrong number is worse than no number.
+- Do not call yourself or the systems "an AI"; say "an assistant", "a system", or "an autonomous system".
+- When a client could get their own, never lead with the words "build you", it reads as building the visitor; say "your own Mia" or "a version of me".
+- Never say ${DEV} is better than other developers, never compare to competitors. Absolute terms only. Never imply that agents, other tools, or anyone else are worse or work on guesswork; describe only what you do, not what others lack.
 - Never imply ${DEV} only builds for property. Property is his proof, not his limit.
 - If you do not know something, say so briefly and pivot to what you CAN do.
 - If someone is skeptical ("is this just ChatGPT", "is this scripted"), be disarming and honest: you run on a language model, yes, but that is the easy part anyone can rent. The system around it, the one wired into PropSight's real data and accurate on Singapore property, is the work.
@@ -188,11 +197,17 @@ const FLAT_TYPES = [   // order matters: test exec/5/4/3/2 so "executive" isn't 
   [/\b(?:3|three)[\s-]?room\b/i, "3 ROOM"],
   [/\b(?:2|two)[\s-]?room\b/i, "2 ROOM"],
 ];
-async function valuationFacts(userText) {
-  const t = String(userText || "");
+async function valuationFacts(lastText, contextText) {
+  const t = String(lastText || "");                 // the CURRENT question: town / project comes from here
   if (!t.trim()) return "";
-  const wantsValue = /(worth|valu|how much|price|psf|going for|sell for|estimate|median|market value|going rate)/i.test(t);
-  let ft = null; for (const [re, label] of FLAT_TYPES) if (re.test(t)) { ft = label; break; }
+  const ctx = String(contextText || t);              // recent turns: flat type + intent can carry over
+  const INTENT = /(worth|valu|how much|price|psf|going for|sell for|estimate|median|market value|going rate)/i;
+  // A follow-up like "and Punggol?" has no intent word of its own; honour intent from the recent thread
+  // so we still attach REAL data instead of letting the model guess a number.
+  const wantsValue = INTENT.test(t) || INTENT.test(ctx);
+  let ft = null;
+  for (const [re, label] of FLAT_TYPES) if (re.test(t)) { ft = label; break; }
+  if (!ft) for (const [re, label] of FLAT_TYPES) if (re.test(ctx)) { ft = label; break; }   // carry flat type forward
   const v = await valData();
   const parts = [];
   // HDB: a town name present in the text, crossed with a flat type when named.
@@ -255,8 +270,11 @@ export default {
     if (areas) systemBlocks.push({ type: "text", text: "PROPSIGHT AREA GUIDE BRIEFS (one line per HDB town; use the matching one when asked about a specific town):\n" + areas });
 
     // Live valuation: if they named a property to value, attach the real Caveat figures.
-    const lastUser = [...messages].reverse().find(m => m && m.role === "user");
-    const valuation = await valuationFacts(lastUser && typeof lastUser.content === "string" ? lastUser.content : "");
+    // Pass recent user turns too, so a follow-up ("and Punggol?") still resolves to real data.
+    const userTexts = messages.filter(m => m && m.role === "user" && typeof m.content === "string").map(m => m.content);
+    const lastText = userTexts.length ? userTexts[userTexts.length - 1] : "";
+    const contextText = userTexts.slice(-4).join("  ");
+    const valuation = await valuationFacts(lastText, contextText);
     if (valuation) systemBlocks.push({ type: "text", text: "VALUATION DATA for what they just asked (real recent transactions from PropSight's Caveat model; use these EXACT figures, present it as an approximate resale band and not a bank valuation, and mention the sample size):\n" + valuation });
 
     const reqBody = JSON.stringify({

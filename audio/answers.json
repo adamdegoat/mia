@@ -1,14 +1,14 @@
 {
 "What's the latest property news?": {
-"a": "Smaller condos are turning up with more construction defects, so if you are buying a new compact unit, get a proper defect inspection locked in before handover.",
+"a": "Smaller condos are turning up more construction defects than bigger ones, so if you are buying a small development, get a thorough inspection before you take the keys. That's the BCA's finding from the past week.",
 "f": "ans_0"
 },
 "How's the Singapore market right now?": {
-"a": "Mass market is leading, suburbs and city fringe are climbing, and prime is the only segment falling.",
+"a": "The suburbs and city-fringe are running hot right now, while prime districts are actually sliding. Private homes across the island averaged $1,753 per square foot last month, up 3.8% year on year.",
 "f": "ans_1"
 },
 "What's a 4-room in Tampines worth?": {
-"a": "Around $665,000 based on recent sales. Most are selling between $622,000 and $758,000, roughly $614 per square foot.",
+"a": "Around $665,000, with most selling between $622,000 and $758,000 at about $614 per square foot. That's from 1,115 recent sales, so it's a solid resale band.",
 "f": "ans_2"
 },
 "Tell me about Tampines": {
@@ -16,55 +16,55 @@
 "f": "ans_3"
 },
 "Can I afford a $1.5m condo?": {
-"a": "That depends on your household income, savings and whether you're a citizen or PR, so I can't say without those details.",
+"a": "I need a bit more to give you a real answer: what's your household income, and are you a citizen, PR, or foreigner?",
 "f": "ans_4"
 },
 "What's the ABSD on a second home?": {
-"a": "Twenty percent for a citizen buying a second home, sixty percent if you are a foreigner.",
+"a": "Twenty percent if you're a citizen, thirty percent if you're a permanent resident, sixty percent if you're a foreigner.",
 "f": "ans_5"
 },
 "What's the SSD if I sell early?": {
-"a": "That depends on how early you're selling. Seller's Stamp Duty kicks in if you sell within the first year of purchase, and it scales down after that until it's gone entirely after four years.",
+"a": "It depends on when you sell. For a private home, it's 16% in year one, 12% in year two, 8% in year three, 4% in year four, and nothing after that.",
 "f": "ans_6"
 },
 "Which HDB towns are heating up?": {
-"a": "Marine Parade is the standout, it's up 11% over three months, which is streets ahead of everywhere else.",
+"a": "Marine Parade is the standout, up 11% over the year.",
 "f": "ans_7"
 },
 "Could I have my own Mia?": {
-"a": "Absolutely. Adam builds custom assistants like me for any business, trained on your data, living on your site, answering your clients around the clock.",
+"a": "You could. Adam builds versions of me for other businesses, trained on their data, living on their site, answering their clients around the clock and catching leads while you sleep.",
 "f": "ans_8"
 },
 "Could she plug into my own data like this?": {
-"a": "Absolutely. Adam builds assistants like me for any business, trained on your own data and living on your site answering your clients. Same engine, different wiring.",
+"a": "Adam builds autonomous systems like me for any business, any data set. Your own Mia, trained on your numbers and talking to your clients, living on your site around the clock, capturing leads the whole time.",
 "f": "ans_9"
 },
 "Can she work my phones like a real front desk?": {
-"a": "Absolutely. There's a premium version that actually takes voice calls, so your clients ring in and talk to a Mia of your own, same way they talk to me now.",
+"a": "Yes, she can. There's a premium version where clients actually call in and talk to their own Mia by voice, just like you'd call a front desk. She answers, routes questions, books things, captures details, all spoken.",
 "f": "ans_10"
 },
 "What would you automate for me?": {
-"a": "I would need to know what your business does first.",
+"a": "That depends entirely on your business. Adam builds autonomous engines, data tools, dashboards, calculators, content systems, and assistants like me for any industry, not just property.",
 "f": "ans_11"
 },
 "Who built all this?": {
-"a": "Adam built me, the whole platform, the news engine that runs itself, the valuation model that checks against real government sales data, all of it. One developer, one machine, shipping live every day.",
+"a": "One developer, Adam. He built the platform, the autonomous news engine that rewrites property stories daily, the valuation model that runs on real government caveats, all the tools, and me.",
 "f": "ans_12"
 },
 "How does it run on its own?": {
-"a": "PropSight publishes new news, runs its valuation model against fresh government data, and updates its market analysis every month, all with no one sitting at a desk pushing buttons.",
+"a": "The whole thing is wired into Singapore's government property data, the market figures, the news feeds.",
 "f": "ans_13"
 },
 "How accurate is your valuation?": {
-"a": "Within about 3.9 percent across roughly 9,500 real sales, based on recent government transaction caveats weighted for the most similar resales in the same flat type, town, storey and remaining lease, then adjusted for those factors and shown with its working so you can see why it lands where it does.",
+"a": "About 3.9 percent across roughly 9,500 real sales, which means most estimates land within that band of the actual selling price.",
 "f": "ans_14"
 },
 "What's the bigger vision here?": {
-"a": "The bigger vision is that Adam built me to prove what one strong developer can ship alone: a real, autonomous system wired into live data, doing expert work in a specific industry, and then staffed by an AI that talks to humans naturally and catches their questions all day.",
+"a": "Adam built me to show what one developer can do when he wires an assistant into real data and real business logic.",
 "f": "ans_15"
 },
 "Can you build outside property?": {
-"a": "Absolutely. Property is the proof, not the limit. Adam builds autonomous research engines, data tools, dashboards, calculators, content systems, video generators, smart websites with real tools built in, and assistants like me for any business in any industry.",
+"a": "Property is the proof, but the engines, the tools, the data systems, and an assistant like me drop into any industry. A restaurant group could have their own Mia answering menu questions and taking reservations.",
 "f": "ans_16"
 }
 }

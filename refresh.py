@@ -50,6 +50,13 @@ def chip_questions():
             out.append(ms.group(1))
     return out
 
+def strip_opener(a):
+    """Mia's prompt bans filler openers but the model still slips one in sometimes; since chip
+    answers are pre-recorded we can guarantee it here."""
+    a = re.sub(r'^(Absolutely|Honestly|Well|Sure|Of course|Certainly|Great question|Good question)\b[,.!:]?\s+',
+               '', a.strip(), flags=re.I)
+    return (a[:1].upper() + a[1:]) if a else a
+
 def ask(question):
     body = json.dumps({"messages": [{"role": "user", "content": question}]}).encode()
     req = urllib.request.Request(WORKER, data=body, headers={
@@ -83,7 +90,7 @@ async def main():
     for i, q in enumerate(questions):
         for attempt in range(3):
             try:
-                a = ask(q)
+                a = strip_opener(ask(q))
                 if not a or re.search(r"say that again|dropped for a second|busy day", a, re.I):
                     raise RuntimeError("weak reply: " + a[:40])
                 stem = f"ans_{i}"
