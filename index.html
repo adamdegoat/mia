@@ -635,6 +635,11 @@ function draw(){
     if(mode==='listening'&&micData){
       const v=micData[Math.floor(i/BARS*micData.length)]/255;
       amp=v*(0.35+0.65*centerBias);
+    }else if(mode==='listening'){
+      // iOS keeps the mic off the AudioContext, so there's no analyser tap — animate a
+      // lively synthetic "listening" pulse so the voiceprint still reads as alive.
+      const wob=0.5+0.5*Math.sin(phase*1.7+i*0.55);
+      amp=0.16+0.5*centerBias*(0.4+0.6*wob);
     }else if(mode==='speaking'){
       // synthetic "talking" motion (clips play as a plain audio element, so there's no
       // analyser tap now) — lively pulse + wobble so the voiceprint reads as alive.
@@ -667,7 +672,16 @@ sizeCanvas(); draw();
    6) MICROPHONE analyser (for listening reactivity) + push-to-talk STT
    ============================================================================ */
 let audioCtx=null, analyser=null, micStream=null;
+// iOS routes ANY mic-touched AudioContext, and audio played through it, to the quiet
+// earpiece ("call mode"). It flips on once the mic opens, which is why live voice went
+// soft / earpiece only sometimes. So on iOS we keep AudioContext out of the loop entirely:
+// speech recognition runs its own mic, the visualizer stays synthetic, and live voice
+// plays as a plain <audio> element on the loudspeaker (like the clips already do).
+const IS_IOS = /iP(hone|od|ad)/.test(navigator.platform)
+  || (/Mac/.test(navigator.platform) && navigator.maxTouchPoints > 1)
+  || /iPhone|iPad|iPod/i.test(navigator.userAgent);
 async function initMic(){
+  if(IS_IOS) return false;      // never attach the mic to an AudioContext on iOS (forces earpiece)
   if(analyser) return true;
   try{
     micStream=await navigator.mediaDevices.getUserMedia({audio:true});
@@ -771,9 +785,9 @@ async function elevenSpeak(text,my,done){
   if(!/audio/i.test(r.headers.get('content-type')||'')) throw new Error('not audio');
   const buf=await r.arrayBuffer();
   if(my!==speakToken) return;
-  if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
-  // Live ElevenLabs audio is ~17dB quieter than the normalized clips. Measure its
-  // loudness and set a matching gain so hold-to-talk is as loud as the pills.
+  if(!IS_IOS && !audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+  // Live audio is quieter than the normalized clips. On non-iOS, measure its loudness and
+  // set a matching gain so the boosted hold-to-talk is as loud as the pills.
   let gain=CONFIG.voiceVolume||6;
   try{
     const ab=await audioCtx.decodeAudioData(buf.slice(0));
@@ -817,9 +831,9 @@ async function voicePlay(src, my, done, gain){
 // the AudioContext is safe; iOS never reaches here (no speech recognition).
 async function liveVoicePlay(src, my, done, gain){
   if(my!==speakToken) return;
-  // Boosted (loud, matches the pills) path ONLY when the context is confirmed RUNNING,
-  // otherwise it would play silent. The context is created + resumed in the Begin tap.
-  if(audioCtx && audioCtx.state==='running'){
+  // Boosted (loud, matches the pills) path ONLY off iOS and when the context is confirmed
+  // RUNNING. On iOS the AudioContext routes to the earpiece, so we fall through to plain.
+  if(!IS_IOS && audioCtx && audioCtx.state==='running'){
     try{
       if(!liveAudio){ liveAudio=new Audio(); liveAudio.playsInline=true; }
       liveAudio.src=src; liveAudio.volume=1;
@@ -925,8 +939,8 @@ async function synthItem(item){
     const buf=await r.arrayBuffer();
     let gain=CONFIG.voiceVolume||6;
     try{
-      if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
-      if(audioCtx){ const ab=await audioCtx.decodeAudioData(buf.slice(0)); const d=ab.getChannelData(0); let s=0,n=0; for(let i=0;i<d.length;i+=32){ s+=d[i]*d[i]; n++; } const rms=Math.sqrt(s/Math.max(1,n)); if(rms>0.00001) gain=Math.min(16,Math.max(1.5,(CONFIG.targetRms||0.16)/rms)); }
+      if(!IS_IOS && !audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+      if(!IS_IOS && audioCtx){ const ab=await audioCtx.decodeAudioData(buf.slice(0)); const d=ab.getChannelData(0); let s=0,n=0; for(let i=0;i<d.length;i+=32){ s+=d[i]*d[i]; n++; } const rms=Math.sqrt(s/Math.max(1,n)); if(rms>0.00001) gain=Math.min(16,Math.max(1.5,(CONFIG.targetRms||0.16)/rms)); }
     }catch(e){}
     item.url=URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'})); item.gain=gain; item.ready=true;
   }catch(e){ item.failed=true; item.ready=true; }
@@ -968,7 +982,7 @@ function playItem(myTok,item){
       ttsAudio.onended=done; ttsAudio.onerror=done;
       karaokeItem(myTok,item); ttsAudio.play().then(()=>watchTail(ttsAudio)).catch(()=>done());
     };
-    if(audioCtx && audioCtx.state==='running'){
+    if(!IS_IOS && audioCtx && audioCtx.state==='running'){
       try{
         if(!liveAudio){ liveAudio=new Audio(); liveAudio.playsInline=true; }
         liveAudio.src=item.url; liveAudio.volume=1;
@@ -1108,10 +1122,10 @@ el('begin').addEventListener('click',()=>{
   // with an assistant turn, which broke the first pill/question.
   showNow('Mia',OPENING); highlight('conversational');
   speakClip('audio/greeting.mp3', OPENING);   // plays within the tap gesture -> sounds on mobile
-  // Where live hold-to-talk works (desktop/Android with speech recognition), create + resume
-  // the AudioContext INSIDE this tap so it's RUNNING for the boosted live path. Skipped on iOS
-  // (no speech recognition there), so clips stay on the plain loudspeaker path untouched.
-  if(SR){
+  // On desktop/Android, create + resume the AudioContext INSIDE this tap so it's RUNNING for
+  // the boosted live path. Skipped on iOS on purpose: any AudioContext there routes audio to
+  // the earpiece, so iOS stays entirely on the plain loudspeaker path (clips AND live voice).
+  if(SR && !IS_IOS){
     if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
     if(audioCtx && audioCtx.state==='suspended'){ audioCtx.resume().catch(()=>{}); }
   }
