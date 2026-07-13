@@ -202,6 +202,7 @@ function json(obj, status) {
 const EDGE_VOICE = "en-SG-LunaNeural";
 const EDGE_RATE = "+18%";
 const EDGE_PITCH = "+8Hz";   // slightly brighter/friendlier (user-chosen)
+const EDGE_VOLUME = "+50%";  // Edge caps its boost here (~-17 LUFS); closes most of the gap to the louder pre-recorded pills
 const EDGE_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
 const EDGE_GEC_VERSION = "1-143.0.3650.75";   // matches edge-tts; if Microsoft starts rejecting, bump the Chromium version.
 
@@ -244,7 +245,7 @@ async function tts(text) {
 
     const ts = new Date().toISOString();
     ws.send(`X-Timestamp:${ts}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}`);
-    const ssml = `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'><voice name='${EDGE_VOICE}'><prosody pitch='${EDGE_PITCH}' rate='${EDGE_RATE}' volume='+0%'>${xmlEsc(spoken)}</prosody></voice></speak>`;
+    const ssml = `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'><voice name='${EDGE_VOICE}'><prosody pitch='${EDGE_PITCH}' rate='${EDGE_RATE}' volume='${EDGE_VOLUME}'>${xmlEsc(spoken)}</prosody></voice></speak>`;
     ws.send(`X-RequestId:${connId}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:${ts}\r\nPath:ssml\r\n\r\n${ssml}`);
 
     const chunks = [];
