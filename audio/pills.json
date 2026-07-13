@@ -86,6 +86,14 @@
       "cap": "web"
     },
     {
+      "id": "leadintro",
+      "g": "build",
+      "q": "Show me how you'd catch a lead",
+      "a": "Easy, let me show you. Say you're a client landing on your site at midnight. Give me your name and number, and watch what I do with it.",
+      "cap": "conversational",
+      "lead": true
+    },
+    {
       "id": "live0",
       "g": "test",
       "q": "What's my place worth?",
@@ -119,6 +127,12 @@
       "q": "How do you actually value a place?",
       "a": "Same way a good valuer thinks, just faster. I take the recent sales of homes like yours, weigh the most similar ones hardest, and adjust for floor height and how much lease is left. No black box, you see every comparable I used.",
       "cap": "tools"
+    }
+  ],
+  "extras": [
+    {
+      "id": "leadconfirm",
+      "a": "And that's a lead caught. It's yours now, it never slips away. On your own site, that's the client you'd have lost while you slept."
     }
   ]
 }

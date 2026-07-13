@@ -222,6 +222,35 @@ footer{
 .chip:focus-visible{outline:2px solid var(--ember-2);outline-offset:2px}
 .chip:disabled{opacity:.4;cursor:default}
 
+/* ---------- lead capture (showcase) ---------- */
+.leadwrap{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;padding:20px}
+.leadwrap.open{display:flex}
+.leadbackdrop{position:absolute;inset:0;background:rgba(6,5,8,.72);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.leadcard{position:relative;width:min(430px,100%);background:var(--ink-2);border:1px solid var(--line-2);
+  border-radius:18px;padding:26px 24px 22px;box-shadow:0 30px 80px -20px rgba(0,0,0,.7);
+  animation:leadup .34s cubic-bezier(.2,.7,.2,1);max-height:calc(100dvh - 40px);overflow-y:auto}
+@keyframes leadup{from{transform:translateY(18px);opacity:0}to{transform:none;opacity:1}}
+.leadtag{color:var(--ember);font-size:10px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:13px;display:flex;align-items:center;gap:7px}
+.leadtag .d{width:6px;height:6px;border-radius:50%;background:var(--ember);animation:pulse 1.6s ease-out infinite}
+.leadtitle{font-size:23px;font-weight:700;letter-spacing:-.01em;margin:0 0 4px}
+.leadsub{color:var(--muted);font-size:14px;margin:0 0 18px;line-height:1.45}
+.lfield{display:block;margin-bottom:12px}
+.lfield span{display:block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-2);margin-bottom:6px}
+.lfield input{width:100%;background:rgba(242,237,230,.05);border:1px solid var(--line-2);border-radius:11px;
+  padding:12px 14px;color:var(--text);font-family:"Space Grotesk";font-size:15px;transition:border-color .2s ease}
+.lfield input::placeholder{color:var(--muted-2)}
+.lfield input:focus{outline:none;border-color:var(--ember)}
+.leadsend{width:100%;margin-top:8px;background:var(--ember);color:#160a04;border:0;border-radius:999px;
+  padding:14px;font-family:"Space Grotesk";font-weight:600;font-size:15px;cursor:pointer;transition:background .2s ease}
+.leadsend:hover{background:var(--ember-2)}
+.leadskip{width:100%;margin-top:9px;background:transparent;border:0;color:var(--muted-2);font-family:"Space Grotesk";font-size:13px;cursor:pointer}
+.leadskip:hover{color:var(--muted)}
+.leaddone{text-align:center;padding:6px 0}
+.leadcheck{width:56px;height:56px;border-radius:50%;background:var(--ember-soft);border:1px solid rgba(255,106,43,.4);
+  display:flex;align-items:center;justify-content:center;margin:2px auto 16px;color:var(--ember)}
+.leadcheck svg{width:26px;height:26px}
+.leadpunch{color:var(--ember);font-size:14.5px;font-weight:500;margin:8px 0 20px;line-height:1.4}
+
 /* ---------- start overlay (cold open) ---------- */
 .veil{
   position:fixed;inset:0;z-index:20;background:var(--ink);
@@ -331,6 +360,29 @@ footer{
   </footer>
 </div>
 
+<div class="leadwrap" id="leadwrap" aria-hidden="true">
+  <div class="leadbackdrop" id="leadbackdrop"></div>
+  <div class="leadcard" role="dialog" aria-modal="true" aria-label="Leave your details">
+    <div id="leadform">
+      <div class="leadtag mono"><span class="d"></span>Lead capture · live demo</div>
+      <h3 class="leadtitle">Leave it with Mia</h3>
+      <p class="leadsub">Pretend you're a client on the agent's website. Mia takes it from here.</p>
+      <label class="lfield"><span>Name</span><input id="ld_name" type="text" placeholder="Your name" autocomplete="off"></label>
+      <label class="lfield"><span>Mobile</span><input id="ld_phone" type="tel" placeholder="Your number" autocomplete="off"></label>
+      <label class="lfield"><span>What are you after?</span><input id="ld_intent" type="text" placeholder="Buying, selling, or a project" autocomplete="off"></label>
+      <button class="leadsend" id="leadsend">Send to Adam</button>
+      <button class="leadskip" id="leadskip">Maybe later</button>
+    </div>
+    <div class="leaddone" id="leaddone" hidden>
+      <div class="leadcheck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+      <h3 class="leadtitle" id="leaddonetitle">Caught.</h3>
+      <p class="leadsub" id="leaddonesub">In a live setup, this reaches the agent the instant it's sent.</p>
+      <p class="leadpunch">That's the client who won't slip away.</p>
+      <button class="leadsend" id="leaddoneok">Done</button>
+    </div>
+  </div>
+</div>
+
 <div class="veil" id="veil">
   <div class="big">M<b>i</b>a</div>
   <div class="tagline">Your 24/7 front desk. She greets every client, answers their questions, and never misses a lead.</div>
@@ -409,6 +461,7 @@ const CHIPS = [
   {q:"What would you automate for me?", audio:"audio/biz2.mp3", g:"build", cap:"research", a:`Tell me what you still do by hand, and I'll tell you. Usually it's the repeats, chasing leads, writing the same updates, pulling the same numbers. If it's a routine, it can run itself, and you keep the part that actually needs you.`},
   {q:"Can you build outside property?", audio:"audio/biz3.mp3", g:"build", cap:"custom", a:`Yes. Property's just where Adam put the showcase, so people can watch the engineering run live. The same parts, autonomous engines, smart tools, a voice like me, drop into any industry. Point him at the boring, repetitive thing in your business.`},
   {q:"Can you build me a website with real tools?", audio:"audio/biz4.mp3", g:"build", cap:"web", a:`Not just a pretty page, a page that actually does something. A valuation checker, calculators, an assistant like me built right in, so you're genuinely useful to your clients, not just findable. This demo is one of them.`},
+  {q:"Show me how you'd catch a lead", audio:"audio/leadintro.mp3", g:"build", cap:"conversational", lead:true, a:`Easy, let me show you. Say you're a client landing on your site at midnight. Give me your name and number, and watch what I do with it.`},
   {q:"What's my place worth?", audio:"audio/live0.mp3", g:"test", cap:"tools", a:`I can get you close. I pull the recent sales of homes like yours, same size, same area, same age, and weigh the nearest ones the way a valuer would. Give me your block and unit type, and I'll draft you a range off real caveats, not a guess.`},
   {q:"What's the ABSD on a second home?", audio:"audio/live1.mp3", g:"test", cap:"tools", a:`For a Singapore citizen buying a second home, it's twenty percent of the price, on top of the usual stamp duty. But if you're selling your first place, a married couple can claim that back, as long as you sell within six months. Get the timing wrong and it's real money.`},
   {q:"Is now a good time to buy?", audio:"audio/live2.mp3", g:"test", cap:"tools", a:`Anyone who gives you a flat yes or no is guessing. What I can do is pull the recent prices where you're looking, show you which way they're moving, and flag if a place sits above or below its neighbours. Then you decide on numbers, not a hunch.`},
@@ -491,7 +544,35 @@ function playPill(pill){
   convo.push({role:'assistant',content:pill.a});
   highlight(pill.cap || pickHighlight(pill.a));   // light the matching system on the board
   speakClip(pill.audio, pill.a, ()=>{ if(my===turn) busy=false; });
+  if(pill.lead) setTimeout(()=>{ if(my===turn) openLead(); }, 900);   // she guides them to the form as she talks
 }
+
+/* ---- lead capture showcase: Mia guides a visitor to leave their details ---- */
+const LEAD_CONFIRM = "And that's a lead caught. It's yours now, it never slips away. On your own site, that's the client you'd have lost while you slept.";
+const leadwrap=el('leadwrap');
+function openLead(){
+  el('leadform').hidden=false; el('leaddone').hidden=true;
+  el('ld_name').value=''; el('ld_phone').value=''; el('ld_intent').value='';
+  el('leaddonetitle').textContent='Caught.';
+  leadwrap.classList.add('open'); leadwrap.setAttribute('aria-hidden','false');
+  setTimeout(()=>{ try{ el('ld_name').focus(); }catch(e){} }, 340);
+}
+function closeLead(){ leadwrap.classList.remove('open'); leadwrap.setAttribute('aria-hidden','true'); }
+function submitLead(){
+  const name=(el('ld_name').value||'').trim();
+  if(!name){ el('ld_name').focus(); return; }               // light validation: need at least a name
+  el('leaddonetitle').textContent='Caught, '+name.split(/\s+/)[0]+'.';
+  el('leadform').hidden=true; el('leaddone').hidden=false;
+  showNow('Mia',LEAD_CONFIRM); pushHistory('Mia',LEAD_CONFIRM);
+  speakClip('audio/leadconfirm.mp3', LEAD_CONFIRM);         // she confirms out loud, instant + free
+}
+el('leadsend').addEventListener('click', submitLead);
+el('leadskip').addEventListener('click', closeLead);
+el('leaddoneok').addEventListener('click', closeLead);
+el('leadbackdrop').addEventListener('click', closeLead);
+el('ld_name').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); el('ld_phone').focus(); } });
+el('ld_phone').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); submitLead(); } });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape' && leadwrap.classList.contains('open')) closeLead(); });
 
 /* ---- status + timecode ---- */
 function setState(label,live){
