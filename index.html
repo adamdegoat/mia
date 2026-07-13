@@ -9,238 +9,175 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://adamdegoat.github.io/mia/">
 <meta property="og:site_name" content="Mia">
-<meta property="og:title" content="Meet Mia, a 24/7 voice front desk">
-<meta property="og:description" content="A live voice system, not a slide. She greets every client, answers out loud, and never misses a lead. Tap and talk to her.">
+<meta property="og:title" content="Meet Mia, a 24/7 property front desk">
+<meta property="og:description" content="Text her anything about Singapore property. She reads the market, values a place, and answers on real data, then speaks it back.">
 <meta property="og:image" content="https://adamdegoat.github.io/mia/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Mia, a 24/7 voice front desk">
+<meta property="og:image:alt" content="Mia, a 24/7 property front desk">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Meet Mia, a 24/7 voice front desk">
-<meta name="twitter:description" content="A live voice system, not a slide. Tap and talk to her out loud.">
+<meta name="twitter:title" content="Meet Mia, a 24/7 property front desk">
+<meta name="twitter:description" content="Text her anything about Singapore property. She answers on real data and speaks it back.">
 <meta name="twitter:image" content="https://adamdegoat.github.io/mia/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-/* ============================================================
-   CONFIG NOTE: change your name + connect the brain in the
-   <script> CONFIG block near the bottom of this file.
-   ============================================================ */
-
 :root{
-  --ink:#0B0A0D;
-  --ink-2:#131116;
-  --line:rgba(242,237,230,.09);
-  --line-2:rgba(242,237,230,.16);
-  --text:#F3EEE7;
-  --muted:#9A939C;
-  --muted-2:#837D88;
-  --ember:#FF6A2B;
-  --ember-2:#FF8A4A;
-  --ember-soft:rgba(255,106,43,.14);
-  --ok:#8FE388;
+  --ink:#0B0A0D; --ink-2:#131116; --ink-3:#181519;
+  --line:rgba(242,237,230,.09); --line-2:rgba(242,237,230,.16);
+  --text:#F3EEE7; --muted:#9A939C; --muted-2:#837D88;
+  --ember:#FF6A2B; --ember-2:#FF8A4A; --ember-soft:rgba(255,106,43,.14);
 }
-
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
-  margin:0;
-  background:var(--ink);
-  color:var(--text);
-  font-family:"Space Grotesk",system-ui,sans-serif;
-  -webkit-font-smoothing:antialiased;
+  margin:0;background:var(--ink);color:var(--text);
+  font-family:"Space Grotesk",system-ui,sans-serif;-webkit-font-smoothing:antialiased;
   overflow:hidden;
 }
-/* fine grain overlay, keeps the ink from looking flat/AI-perfect */
+/* fine grain so the ink never looks flat/AI-perfect */
 body::after{
-  content:"";position:fixed;inset:0;pointer-events:none;z-index:9;
-  opacity:.05;mix-blend-mode:overlay;
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:9;opacity:.045;mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
 }
 .mono{font-family:"Space Mono",monospace}
 
-/* ---------- shell ---------- */
+/* ---------- shell: header / thread / dock ---------- */
 .app{
-  height:100%;height:100dvh;
-  display:grid;
-  grid-template-rows:auto minmax(0,1fr) auto;
-  grid-template-areas:"header" "stage" "footer";
-  max-width:940px;margin:0 auto;
-  padding:clamp(16px,2.2vw,30px);
+  height:100%;height:100dvh;display:flex;flex-direction:column;
+  max-width:780px;margin:0 auto;
+  padding:clamp(12px,2vw,20px) clamp(12px,2.4vw,26px) 0;
 }
-header{grid-area:header}
-.stage{grid-area:stage}
-footer{grid-area:footer}
 
 /* ---------- header ---------- */
 header{
-  display:flex;align-items:center;justify-content:space-between;
-  padding-bottom:clamp(14px,1.8vw,22px);
-  border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;flex:0 0 auto;
+  padding-bottom:13px;border-bottom:1px solid var(--line);
 }
-.brand{display:flex;align-items:baseline;gap:14px}
-.brand .mark{
-  font-weight:700;font-size:clamp(20px,2.4vw,26px);letter-spacing:.02em;
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.avatar{
+  width:38px;height:38px;border-radius:50%;flex:none;position:relative;
+  background:radial-gradient(120% 120% at 30% 25%,#2a2230,#141016);
+  border:1px solid var(--line-2);display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:17px;color:var(--text);letter-spacing:.02em;
 }
-.brand .mark b{color:var(--ember);font-weight:700}
-.brand .sub{
-  font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted-2);
-}
-.status{display:flex;align-items:center;gap:16px}
-.hright{display:flex;align-items:center;gap:16px}
+.avatar b{color:var(--ember)}
+.avatar::after{content:"";position:absolute;right:-1px;bottom:-1px;width:11px;height:11px;border-radius:50%;
+  background:var(--ember);border:2px solid var(--ink);box-shadow:0 0 8px 1px rgba(255,106,43,.5)}
+.bmeta{display:flex;flex-direction:column;min-width:0}
+.bname{font-weight:600;font-size:16px;letter-spacing:-.01em;line-height:1.15}
+.bname b{color:var(--ember);font-weight:600}
+.bstat{font-family:"Space Mono",monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-2);margin-top:2px;white-space:nowrap}
+.bstat .on{color:var(--ember)}
+.hright{display:flex;align-items:center;gap:11px;flex:none}
 .wa{display:inline-flex;align-items:center;gap:8px;text-decoration:none;white-space:nowrap;
-  border:1px solid var(--line-2);color:var(--text);
-  padding:8px 14px;border-radius:999px;font-size:13px;font-weight:600;letter-spacing:.01em;
+  border:1px solid var(--line-2);color:var(--text);padding:8px 13px;border-radius:999px;font-size:13px;font-weight:600;
   transition:border-color .2s ease,background .2s ease}
 .wa:hover{border-color:var(--ember);background:var(--ember-soft)}
-.wa svg{width:16px;height:16px;flex:none}
-.navlink{display:inline-flex;align-items:center;gap:6px;font-family:"Space Mono",monospace;font-size:11px;
-  letter-spacing:.16em;text-transform:uppercase;color:var(--muted);text-decoration:none;white-space:nowrap;
-  border:1px solid var(--line-2);border-radius:999px;padding:6px 12px;transition:color .2s ease,border-color .2s ease}
+.wa svg{width:15px;height:15px;flex:none}
+.navlink{display:inline-flex;align-items:center;gap:6px;font-family:"Space Mono",monospace;font-size:10.5px;
+  letter-spacing:.15em;text-transform:uppercase;color:var(--muted);text-decoration:none;white-space:nowrap;
+  border:1px solid var(--line-2);border-radius:999px;padding:6px 11px;transition:color .2s ease,border-color .2s ease}
 .navlink:hover{color:var(--ember);border-color:var(--ember)}
-.navlink svg{width:12px;height:12px;flex:none}
-.tc{font-size:12px;letter-spacing:.14em;color:var(--muted)}
-.state{
-  display:flex;align-items:center;gap:9px;
-  font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);
-}
-.dot{
-  width:9px;height:9px;border-radius:50%;background:var(--muted-2);
-  box-shadow:0 0 0 0 rgba(255,106,43,0);
-}
-.state[data-live="1"] .dot{background:var(--ember);animation:pulse 1.6s ease-out infinite}
-.state[data-live="1"]{color:var(--ember)}
-@keyframes pulse{
-  0%{box-shadow:0 0 0 0 rgba(255,106,43,.5)}
-  70%{box-shadow:0 0 0 10px rgba(255,106,43,0)}
-  100%{box-shadow:0 0 0 0 rgba(255,106,43,0)}
-}
+.navlink svg{width:11px;height:11px;flex:none}
 
-/* ---------- stage (single focused column) ---------- */
-.stage{
-  display:flex;flex-direction:column;justify-content:flex-start;
-  min-height:0;overflow:hidden;position:relative;
+/* ---------- chat thread ---------- */
+.thread{
+  flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+  display:flex;flex-direction:column;gap:12px;
+  padding:18px 2px 8px;scrollbar-width:thin;scrollbar-color:var(--line-2) transparent;
 }
-.wave{
-  width:100%;height:clamp(120px,18vh,190px);display:block;flex:0 0 auto;
+.thread::-webkit-scrollbar{width:7px}
+.thread::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:99px}
+.msg{max-width:min(82%,540px);display:flex;flex-direction:column;gap:4px;animation:pop .28s cubic-bezier(.2,.7,.2,1)}
+@keyframes pop{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.msg.mia{align-self:flex-start}
+.msg.you{align-self:flex-end;align-items:flex-end}
+.mtop{display:flex;align-items:center;gap:8px;padding:0 4px}
+.mwho{font-family:"Space Mono",monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ember)}
+.msg.you .mwho{color:var(--muted-2)}
+.mtime{font-family:"Space Mono",monospace;font-size:10px;color:var(--muted-2);letter-spacing:.04em}
+.bubble{
+  font-size:15px;line-height:1.5;letter-spacing:-.005em;
+  padding:11px 15px;border-radius:16px;overflow-wrap:break-word;word-break:break-word;
 }
-.convo{
-  flex:1 1 auto;min-height:0;overflow-y:auto;position:relative;
-  display:flex;flex-direction:column;align-items:center;text-align:center;
-  padding-top:clamp(14px,2.6vh,28px);
-  scrollbar-width:none;
-}
-.convo::-webkit-scrollbar{display:none}
-.convo.more{
-  -webkit-mask-image:linear-gradient(to bottom,#000 82%,transparent);
-  mask-image:linear-gradient(to bottom,#000 82%,transparent);
-}
-.now{
-  font-size:clamp(21px,2.1vw,29px);
-  font-weight:500;line-height:1.34;letter-spacing:-.01em;
-  max-width:28em;min-height:0;margin:0 auto;
-  overflow-wrap:break-word;word-break:break-word;
-  transition:opacity .5s ease;
-}
-.stage,.convo{min-width:0}
-.now.dim{opacity:.18}
-#nowText .w{color:var(--muted-2);transition:color .18s ease,text-shadow .18s ease}
-#nowText .w.said{color:var(--text)}
-#nowText .w.on{color:var(--ember);text-shadow:0 0 14px rgba(255,106,43,.35)}
-.state.sp{cursor:pointer}
-.stopcue{display:none;margin-left:9px;padding-left:9px;border-left:1px solid rgba(255,255,255,.14);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
-.state.sp .stopcue{display:inline}
-.stage.speaking{cursor:pointer}
-.now .who{
-  display:block;font-family:"Space Mono",monospace;
-  font-size:12px;letter-spacing:.22em;text-transform:uppercase;
-  color:var(--ember);margin-bottom:14px;font-weight:400;
-}
-.now .who.you{color:var(--muted)}
-.history{
-  display:flex;flex-direction:column;gap:6px;align-items:center;
-  max-width:40ch;margin:0 auto 16px;
-}
-.history p{
-  margin:0;font-size:14px;line-height:1.4;color:var(--muted-2);
-}
-.history p b{color:var(--muted);font-weight:400}
+.msg.mia .bubble{background:var(--ink-2);border:1px solid var(--line-2);border-left:2px solid var(--ember);border-top-left-radius:5px;color:var(--text)}
+.msg.you .bubble{background:var(--ember);color:#1a0c04;border-top-right-radius:5px;font-weight:500}
+.msg.mia.speaking .bubble{border-left-color:var(--ember-2);box-shadow:0 0 0 1px rgba(255,106,43,.18)}
+/* speaking waveform inside Mia's bubble */
+.spk{display:none;align-items:flex-end;gap:2.5px;height:12px;margin-top:8px}
+.msg.mia.speaking .spk{display:inline-flex}
+.spk i{width:2.5px;background:var(--ember);border-radius:2px;animation:eq .9s ease-in-out infinite}
+.spk i:nth-child(1){height:40%;animation-delay:0s}
+.spk i:nth-child(2){height:90%;animation-delay:.15s}
+.spk i:nth-child(3){height:60%;animation-delay:.3s}
+.spk i:nth-child(4){height:100%;animation-delay:.45s}
+.spk i:nth-child(5){height:50%;animation-delay:.6s}
+@keyframes eq{0%,100%{transform:scaleY(.4)}50%{transform:scaleY(1)}}
+.replay{margin-top:7px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+  font-family:"Space Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted-2);
+  background:none;border:0;padding:0;transition:color .2s ease}
+.msg.mia.speaking .replay{display:none}
+.replay:hover{color:var(--ember)}
+.replay svg{width:12px;height:12px}
+/* typing indicator bubble */
+.typing .bubble{display:inline-flex;gap:5px;padding:14px 16px}
+.typing .bubble i{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite}
+.typing .bubble i:nth-child(2){animation-delay:.2s}
+.typing .bubble i:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,60%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
 
-/* ---------- footer / controls ---------- */
-footer{
-  padding-top:clamp(16px,2vh,22px);
-  border-top:1px solid var(--line);
-  display:flex;align-items:center;justify-content:center;gap:clamp(14px,2vw,26px);
-  flex-wrap:wrap;
+/* ---------- dock: suggestions + composer ---------- */
+.dock{flex:0 0 auto;padding:8px 0 max(12px,env(safe-area-inset-bottom));background:var(--ink)}
+.suggest{display:flex;flex-direction:column;gap:9px;margin-bottom:11px}
+.sgroup{min-width:0}
+.slabel{font-family:"Space Mono",monospace;font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted-2);margin:0 2px 6px}
+.srow{display:flex;gap:8px;flex-wrap:wrap}   /* desktop: show every chip */
+.chip{
+  flex:0 0 auto;scroll-snap-align:start;appearance:none;cursor:pointer;white-space:nowrap;
+  background:var(--ink-2);border:1px solid var(--line-2);color:var(--text);
+  font-family:"Space Grotesk";font-size:13.5px;font-weight:500;
+  padding:9px 15px;border-radius:999px;
+  transition:border-color .18s ease,color .18s ease,background .18s ease,transform .12s ease;
 }
-.ptt{
-  appearance:none;border:0;cursor:pointer;flex:0 0 auto;
-  display:flex;align-items:center;justify-content:center;gap:11px;
-  height:54px;box-sizing:border-box;padding:0 24px;
-  background:var(--ember);color:#160a04;
-  font-family:"Space Grotesk";font-weight:600;font-size:15px;letter-spacing:.01em;
-  border-radius:999px;
-  transition:transform .12s ease,background .2s ease,box-shadow .2s ease;
-  box-shadow:0 6px 24px -8px rgba(255,106,43,.6);
-  user-select:none;-webkit-user-select:none;touch-action:none;
-}
-.ptt svg{width:18px;height:18px}
-.ptt:hover{background:var(--ember-2)}
-.ptt.holding{transform:scale(.97);background:#fff;box-shadow:0 0 0 6px var(--ember-soft)}
-.ptt:focus-visible{outline:2px solid var(--ember-2);outline-offset:3px}
-.hint{font-size:12px;color:var(--muted-2);letter-spacing:.02em;flex:0 0 auto}
-.hint b{color:var(--muted);font-weight:400}
-/* composer: mic OR type */
-.composer{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;width:100%}
-.cor{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted-2);flex:0 0 auto}
+.chip:hover{border-color:var(--ember);background:var(--ember-soft)}
+.chip:active{transform:scale(.96)}
+.chip.lead{border-color:rgba(255,106,43,.45);color:var(--ember-2)}
+.chip:disabled{opacity:.4;cursor:default}
+.composer{display:flex;align-items:center;gap:10px}
 .tin{
-  flex:1 1 260px;min-width:0;max-width:440px;
-  height:54px;box-sizing:border-box;padding:0 22px;
-  background:rgba(242,237,230,.06);border:1px solid var(--line-2);border-radius:27px;
+  flex:1 1 auto;min-width:0;height:52px;box-sizing:border-box;padding:0 20px;
+  background:rgba(242,237,230,.06);border:1px solid var(--line-2);border-radius:26px;
   color:var(--text);font-family:"Space Grotesk";font-size:16px;line-height:normal;
   transition:border-color .2s ease,background .2s ease;
 }
 .tin::placeholder{color:var(--muted-2)}
 .tin:focus{outline:none;border-color:var(--ember);background:rgba(242,237,230,.09)}
-.send{
-  flex:0 0 auto;width:54px;height:54px;border-radius:50%;border:0;background:var(--ember);color:#160a04;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;transition:background .2s ease;
-}
+.send{flex:0 0 auto;width:52px;height:52px;border-radius:50%;border:0;background:var(--ember);color:#160a04;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:background .2s ease,transform .12s ease}
 .send:hover{background:var(--ember-2)}
+.send:active{transform:scale(.94)}
 .send:focus-visible{outline:2px solid var(--ember-2);outline-offset:3px}
 .send svg{width:20px;height:20px}
-.chips{display:flex;flex-direction:column;align-items:center;gap:15px;width:100%;flex:1 1 100%;margin:4px 0 0}
-.chipgroup{min-width:0;width:100%}
-.cglbl{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted-2);margin-bottom:9px;text-align:center}
-.chiprow{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
-.chip{
-  appearance:none;cursor:pointer;
-  background:transparent;border:1px solid var(--line-2);color:var(--muted);
-  font-family:"Space Grotesk";font-size:13px;
-  padding:9px 15px;border-radius:999px;
-  transition:border-color .2s ease,color .2s ease,background .2s ease;
-}
-.chip:hover{border-color:var(--ember);color:var(--text);background:var(--ember-soft)}
-.chip:focus-visible{outline:2px solid var(--ember-2);outline-offset:2px}
-.chip:disabled{opacity:.4;cursor:default}
 
 /* ---------- lead capture (showcase) ---------- */
 .leadwrap{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;padding:20px}
 .leadwrap.open{display:flex}
-.leadbackdrop{position:absolute;inset:0;background:rgba(6,5,8,.72);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.leadbackdrop{position:absolute;inset:0;background:rgba(6,5,8,.74);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
 .leadcard{position:relative;width:min(430px,100%);background:var(--ink-2);border:1px solid var(--line-2);
   border-radius:18px;padding:26px 24px 22px;box-shadow:0 30px 80px -20px rgba(0,0,0,.7);
   animation:leadup .34s cubic-bezier(.2,.7,.2,1);max-height:calc(100dvh - 40px);overflow-y:auto}
 @keyframes leadup{from{transform:translateY(18px);opacity:0}to{transform:none;opacity:1}}
 .leadtag{color:var(--ember);font-size:10px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:13px;display:flex;align-items:center;gap:7px}
 .leadtag .d{width:6px;height:6px;border-radius:50%;background:var(--ember);animation:pulse 1.6s ease-out infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,106,43,.5)}70%{box-shadow:0 0 0 9px rgba(255,106,43,0)}100%{box-shadow:0 0 0 0 rgba(255,106,43,0)}}
 .leadtitle{font-size:23px;font-weight:700;letter-spacing:-.01em;margin:0 0 4px}
 .leadsub{color:var(--muted);font-size:14px;margin:0 0 18px;line-height:1.45}
 .lfield{display:block;margin-bottom:12px}
 .lfield span{display:block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-2);margin-bottom:6px}
 .lfield input{width:100%;background:rgba(242,237,230,.05);border:1px solid var(--line-2);border-radius:11px;
-  padding:12px 14px;color:var(--text);font-family:"Space Grotesk";font-size:15px;transition:border-color .2s ease}
+  padding:12px 14px;color:var(--text);font-family:"Space Grotesk";font-size:16px;transition:border-color .2s ease}
 .lfield input::placeholder{color:var(--muted-2)}
 .lfield input:focus{outline:none;border-color:var(--ember)}
 .leadsend{width:100%;margin-top:8px;background:var(--ember);color:#160a04;border:0;border-radius:999px;
@@ -254,66 +191,37 @@ footer{
 .leadcheck svg{width:26px;height:26px}
 .leadpunch{color:var(--ember);font-size:14.5px;font-weight:500;margin:8px 0 20px;line-height:1.4}
 
-/* ---------- start overlay (cold open) ---------- */
-.veil{
-  position:fixed;inset:0;z-index:20;background:var(--ink);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:22px;text-align:center;padding:24px;
-  transition:opacity .6s ease;
-}
+/* ---------- cold open ---------- */
+.veil{position:fixed;inset:0;z-index:20;background:radial-gradient(1000px 520px at 50% -12%,#1d1720,var(--ink) 60%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;text-align:center;padding:26px;
+  transition:opacity .55s ease}
 .veil.gone{opacity:0;pointer-events:none}
-.veil .big{
-  font-size:clamp(40px,9vw,96px);font-weight:700;letter-spacing:-.02em;line-height:1;
-  margin-bottom:2px;
-}
+.veil .big{font-size:clamp(46px,10vw,104px);font-weight:700;letter-spacing:-.02em;line-height:1;margin-bottom:2px}
 .veil .big b{color:var(--ember)}
-.veil .tagline{max-width:22ch;font-size:clamp(20px,2.4vw,29px);font-weight:500;line-height:1.35;letter-spacing:-.01em;color:var(--text)}
-.veil .line{color:var(--muted-2);max-width:32ch;font-size:clamp(14px,1.3vw,16px);line-height:1.5;margin-top:-6px}
-.begin{
-  appearance:none;border:1px solid var(--line-2);cursor:pointer;
-  background:transparent;color:var(--text);
-  font-family:"Space Grotesk";font-weight:600;font-size:16px;
-  padding:16px 34px;border-radius:999px;margin-top:6px;
-  display:flex;align-items:center;gap:12px;
-  transition:border-color .2s ease,background .2s ease;
-}
-.begin:hover{border-color:var(--ember);background:var(--ember-soft)}
-.begin .d{width:9px;height:9px;border-radius:50%;background:var(--ember);
-  animation:pulse 1.6s ease-out infinite}
-.warn{position:fixed;bottom:14px;left:0;right:0;text-align:center;
-  font-size:12px;color:var(--muted-2);z-index:21}
+.veil .tagline{max-width:20ch;font-size:clamp(19px,2.3vw,27px);font-weight:500;line-height:1.35;letter-spacing:-.01em;color:var(--text)}
+.veil .line{color:var(--muted-2);max-width:34ch;font-size:clamp(13.5px,1.3vw,15.5px);line-height:1.55;margin-top:-4px}
+.begin{appearance:none;border:0;cursor:pointer;background:var(--ember);color:#160a04;
+  font-family:"Space Grotesk";font-weight:600;font-size:16px;padding:15px 34px;border-radius:999px;margin-top:8px;
+  display:flex;align-items:center;gap:11px;box-shadow:0 8px 30px -8px rgba(255,106,43,.6);transition:background .2s ease}
+.begin:hover{background:var(--ember-2)}
+.begin .d{width:8px;height:8px;border-radius:50%;background:#160a04;opacity:.7}
 
 /* ---------- responsive ---------- */
-@media (max-width:860px){
-  /* Mobile-first reorder: answer + pills + talk are the core; the capability
-     panel drops to the bottom (secondary on a phone). Whole page scrolls. */
-  html,body{height:auto;overflow:visible}          /* let the page scroll on mobile (base body is overflow:hidden for desktop) */
-  .app{padding:16px 16px 24px;height:auto;min-height:100dvh;display:flex;flex-direction:column;column-gap:0}
-  header{order:0}
-  .stage{order:1;display:block;overflow:visible;min-height:auto}
-  footer{order:2;margin-top:18px;padding-top:16px;gap:12px;flex-wrap:wrap}
-  /* fixed-height answer area so changing the text (greeting -> short reply) never
-     shifts the button/pills below it. Snug to the greeting; long answers scroll
-     inside (the voice carries them, the screen shows the start). */
-  .convo{height:clamp(140px,23vh,170px);overflow-y:auto;padding-top:0}
-  .wave{height:64px}                     /* small signal, not a big empty band */
-  .now{font-size:clamp(18px,5vw,22px);line-height:1.34;max-width:100%;width:100%;margin-top:12px}
-  .history{display:none}
-  .ptt{order:1;flex:1 1 auto;justify-content:center}
-  .hint{display:none}
-  .cor{display:none}                 /* the "or" reads orphaned once the bar wraps on phones */
-  .composer{gap:10px}
-  .tin{flex:1 1 auto}
-  .chips{order:2;margin-left:0;width:100%;flex-wrap:wrap}   /* ALL pills visible, no hidden sideways scroll */
-  .chip{flex:0 0 auto;padding:11px 16px;font-size:13.5px}   /* comfier ~44px tap target on phones */
-  .status .tc{display:none}
-}
-@media (max-width:560px){
-  .ptt{flex:1 1 auto;justify-content:center}
-  .brand .sub{display:none}
-  .wa span{display:none}          /* icon-only on narrow phones */
+@media (max-width:640px){
+  .app{max-width:100%;padding:10px 12px 0}
+  .navlink span{display:none}
+  .navlink{padding:6px 9px}
+  .wa span{display:none}
   .wa{padding:9px}
-  .hright{gap:12px}
+  .msg{max-width:86%}
+  .thread{padding:14px 0 6px}
+  .bstat{font-size:10px}
+  .bstat .sfx{display:none}   /* just "Online" on a phone; no wrap */
+  /* phone: chips become a swipeable strip with a fade cue on the right */
+  .srow{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;scroll-snap-type:x proximity;
+    -webkit-mask-image:linear-gradient(90deg,#000 90%,transparent);mask-image:linear-gradient(90deg,#000 90%,transparent)}
+  .srow::-webkit-scrollbar{display:none}
+  .chip{scroll-snap-align:start}
 }
 </style>
 </head>
@@ -321,8 +229,11 @@ footer{
 <div class="app">
   <header>
     <div class="brand">
-      <div class="mark" id="mark">M<b>i</b>a</div>
-      <div class="sub">24/7 front desk</div>
+      <div class="avatar" id="avatar">M<b>i</b></div>
+      <div class="bmeta">
+        <div class="bname">M<b>i</b>a</div>
+        <div class="bstat" id="bstat"><span class="on">● Online</span><span class="sfx"> · PropSight front desk</span></div>
+      </div>
     </div>
     <div class="hright">
       <a class="navlink" href="services.html">Studio <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
@@ -330,38 +241,20 @@ footer{
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
         <span>WhatsApp Adam</span>
       </a>
-      <div class="status">
-        <div class="tc mono" id="tc">00:00</div>
-        <div class="state" id="state" data-live="0"><span class="dot"></span><span id="stateLabel">Ready</span><span class="stopcue">Tap to stop</span></div>
-      </div>
     </div>
   </header>
 
-    <section class="stage">
-      <canvas class="wave" id="wave"></canvas>
-      <div class="convo" id="convo">
-        <div class="history" id="history" aria-live="off"></div>
-        <div class="now dim" id="now">
-          <span class="who" id="nowWho">Mia</span>
-          <span id="nowText">Ready when you are.</span>
-        </div>
-      </div>
-    </section>
+  <div class="thread" id="thread" aria-live="polite"></div>
 
-  <footer>
+  <div class="dock">
+    <div class="suggest" id="suggest"></div>
     <div class="composer">
-      <button class="ptt" id="ptt" aria-label="Hold to speak">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
-        <span>Hold to speak</span>
-      </button>
-      <span class="cor mono">or</span>
-      <input class="tin" id="tin" type="text" placeholder="type your question" autocomplete="off" enterkeyhint="send" aria-label="Type your question">
+      <input class="tin" id="tin" type="text" placeholder="Message Mia" autocomplete="off" enterkeyhint="send" aria-label="Message Mia">
       <button class="send" id="tsend" aria-label="Send">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 11l5-5 5 5"/><path d="M12 6v13"/></svg>
       </button>
     </div>
-    <div class="chips" id="chips"></div>
-  </footer>
+  </div>
 </div>
 
 <div class="leadwrap" id="leadwrap" aria-hidden="true">
@@ -389,118 +282,167 @@ footer{
 
 <div class="veil" id="veil">
   <div class="big">M<b>i</b>a</div>
-  <div class="tagline">Your 24/7 front desk. She greets every client, answers their questions, and never misses a lead.</div>
-  <div class="line">A live system, not a slide. Tap to meet her.</div>
-  <button class="begin" id="begin"><span class="d"></span>Begin</button>
+  <div class="tagline">Text her anything about Singapore property.</div>
+  <div class="line">She reads the market, values a place, and answers on real PropSight data, then speaks it back. A live system, not a slide.</div>
+  <button class="begin" id="begin"><span class="d"></span>Start chatting</button>
 </div>
-<div class="warn" id="warnBrowser"></div>
 
 <script>
 /* ============================================================================
-   1) CONFIG  -  the only two things you normally touch
+   1) CONFIG
    ============================================================================ */
 const CONFIG = {
-  // Your name. Mia says this out loud and it shows in the header line.
   developerName: "Adam",
-
-  // Paste your Cloudflare Worker URL here to make Mia answer LIVE with Claude.
-  // Leave it "" and she runs on built-in scripted answers (offline demo mode).
   workerUrl: "https://mia-brain.propsightsg.workers.dev",
-
-  // Pick a voice by name if you want a specific one (see console for the list).
-  // "" = auto-pick the best available English voice.
-  voiceName: "",
-  speechRate: 1.0,
-  speechPitch: 1.02,
-
-  // The browser voice spells "Mia" as M-I-A (treats it like an acronym). We feed
-  // it this phonetic spelling instead, while the screen still shows "Mia".
-  // Tune by ear if it sounds off: try "Mya", "Mee-ah", "Meeya".
-  sayName: "Meeya",
-
-  // Mia's voice. true = worker TTS (Luna). false = browser voice. Falls back automatically.
-  useElevenLabs: true,
+  useWorkerVoice: true,     // true = worker TTS (Luna). false = browser voice. Falls back automatically.
+  voiceName: "", speechRate: 1.0, speechPitch: 1.02, sayName: "Meeya",
 };
-
-/* Mia's opening line to the room (spoken instantly, no model needed). */
-const OPENING = `Hi, I'm Mia. I'm the front desk that never sleeps, never forgets a face, and never misses a lead. `
-  + `Ask me anything out loud, or tap a question to start.`;
+const OPENING = `Hi, I'm Mia, PropSight's front desk. Ask me anything about Singapore property, the latest news, the market, what a place is worth, and I'll answer on real data. Tap a suggestion below or just text me.`;
 
 /* ============================================================================
-   2) PILLS  -  each plays a pre-recorded Luna clip; `a` is also the scripted
-   fallback spoken if a live call fails/times out. `cap` is vestigial (unused).
+   2) SUGGESTIONS  -  the chips people tap. Grouped: her live brain / your
+   business / the builder. Each sends a real question to Mia.
    ============================================================================ */
-const D = CONFIG.developerName;
-const CHIPS = [
-  {q:"What have you built?", audio:"audio/sys0.mp3", g:"built", cap:"research", a:`Short version, a whole property platform that runs itself with nobody touching it. A valuation model, market reports that fact-check their own numbers, a news engine that writes and translates itself every morning, and me. Property's just where you can watch it work, the same engineering fits any business.`},
-  {q:"How does it run on its own?", audio:"audio/sys1.mp3", g:"built", cap:"research", a:`Most of it runs on a schedule with nobody at the wheel. The news publishes itself each morning, the monthly report audits its own numbers before it ships, and every engine has a fallback, so it never fails quietly.`},
-  {q:"How accurate is your valuation?", audio:"audio/sys2.mp3", g:"built", cap:"tools", a:`Within about four percent of the real sale price, tested across roughly nine thousand five hundred actual transactions. It pulls the real government caveats, weighs the most similar recent sales, and adjusts for floor and lease. And it shows its working, so you can stand behind the number.`},
-  {q:"Prove you're not scripted", audio:"audio/sys4.mp3", g:"built", cap:"conversational", a:`You tapped a button and I handed you a tidy line, so fair enough, that proves nothing. Hold the mic and ask me anything, completely off script, and watch me handle it live. That's the real proof.`},
-  {q:"Could I have my own Mia?", audio:"audio/biz0.mp3", g:"build", cap:"conversational", a:`That's the whole idea. Your own version of me, in your brand, trained on your business, answering your clients around the clock so you never miss a late enquiry. Tap the WhatsApp button and Adam will set it up.`},
-  {q:"What could you build my agency?", audio:"audio/biz1.mp3", g:"build", cap:"custom", a:`Whatever eats your team's time. A system that sorts and chases your own leads, a research engine that briefs you every morning, tools your clients use on your site, or a voice like me on the phones. Property's the showcase, this works for any business.`},
-  {q:"What would you automate for me?", audio:"audio/biz2.mp3", g:"build", cap:"research", a:`Tell me what you still do by hand, and I'll tell you. Usually it's the repeats, chasing leads, writing the same updates, pulling the same numbers. If it's a routine, it can run itself, and you keep the part that actually needs you.`},
-  {q:"Can you build outside property?", audio:"audio/biz3.mp3", g:"build", cap:"custom", a:`Yes. Property's just where Adam put the showcase, so people can watch the engineering run live. The same parts, autonomous engines, smart tools, a voice like me, drop into any industry. Point him at the boring, repetitive thing in your business.`},
-  {q:"Can you build me a website with real tools?", audio:"audio/biz4.mp3", g:"build", cap:"web", a:`Not just a pretty page, a page that actually does something. A valuation checker, calculators, an assistant like me built right in, so you're genuinely useful to your clients, not just findable. This demo is one of them.`},
-  {q:"Show me how you'd catch a lead", audio:"audio/leadintro.mp3", g:"build", cap:"conversational", lead:true, a:`Easy, let me show you. Say you're a client landing on your site at midnight. Give me your name and number, and watch what I do with it.`},
-  {q:"What's my place worth?", audio:"audio/live0.mp3", g:"test", cap:"tools", a:`I can get you close. I pull the recent sales of homes like yours, same size, same area, same age, and weigh the nearest ones the way a valuer would. Give me your block and unit type, and I'll draft you a range off real caveats, not a guess.`},
-  {q:"What's the ABSD on a second home?", audio:"audio/live1.mp3", g:"test", cap:"tools", a:`For a Singapore citizen buying a second home, it's twenty percent of the price, on top of the usual stamp duty. But if you're selling your first place, a married couple can claim that back, as long as you sell within six months. Get the timing wrong and it's real money.`},
-  {q:"Is now a good time to buy?", audio:"audio/live2.mp3", g:"test", cap:"tools", a:`Anyone who gives you a flat yes or no is guessing. What I can do is pull the recent prices where you're looking, show you which way they're moving, and flag if a place sits above or below its neighbours. Then you decide on numbers, not a hunch.`},
-  {q:"What's the SSD if I sell early?", audio:"audio/live3.mp3", g:"test", cap:"tools", a:`On a private home, if you sell within the first year it's sixteen percent of the price, and it steps down each year until it's gone after four. An HDB flat has a five year minimum before you can sell at all. Tell me when you bought, and I'll place you exactly.`},
-  {q:"How do you actually value a place?", audio:"audio/live4.mp3", g:"test", cap:"tools", a:`Same way a good valuer thinks, just faster. I take the recent sales of homes like yours, weigh the most similar ones hardest, and adjust for floor height and how much lease is left. No black box, you see every comparable I used.`},
+const GROUPS = [
+  { label: "Ask her anything · live", chips: [
+    "What's the latest property news?",
+    "How's the Singapore market right now?",
+    "What's my flat worth?",
+    "Tell me about Tampines",
+    "Can I afford a $1.5m condo?",
+    "What's the ABSD on a second home?",
+    "What's the SSD if I sell early?",
+    "Which HDB towns are heating up?",
+  ]},
+  { label: "Imagine her for your business", chips: [
+    "Could I have my own Mia?",
+    { q: "How would you catch my leads?", lead: true },
+    "Could she plug into my own data like this?",
+    "Can she work my phones like a real front desk?",
+    "What would you automate for me?",
+  ]},
+  { label: "The builder behind it", chips: [
+    "Who built all this?",
+    "How does it run on its own?",
+    "How accurate is your valuation?",
+    "What's the bigger vision here?",
+    "Can you build outside property?",
+  ]},
 ];
-const FALLBACKS = [
-  `The short version: ${D} builds custom systems for property here. Research engines, tools, dashboards, things that talk like me. Tell me what your team still does by hand and I'll tell you what he'd automate.`,
-  `That depends on you, which is the point. ${D} builds to fit the agency. Give me the task that eats your week and I'll tell you how he'd take it off your plate.`,
-  `I could take that a few ways. What ${D} really does is turn the repetitive parts of property work into systems that run on their own. What's the part you'd never want to touch again?`,
-  `Fair one. I'm a small taste of it, ${D} builds the bigger machines behind the scenes, the ones that research, calculate, and follow up without anyone lifting a finger.`,
-];
-let _fb=0; const nextFallback=()=>FALLBACKS[(_fb++)%FALLBACKS.length];
 
 /* ============================================================================
-   4) ENGINE  -  browser speech in, Claude (or script) out, browser voice back
+   3) ENGINE
    ============================================================================ */
 const el = id => document.getElementById(id);
-const stateEl=el('state'), stateLabel=el('stateLabel'), tcEl=el('tc');
-const nowEl=el('now'), nowText=el('nowText'), nowWho=el('nowWho'), histEl=el('history'), stageEl=document.querySelector('.stage');
-let convo=[];               // [{role, content}] for the model
-let busy=false, started=false, turn=0;
-// karaoke (follow-along) state: word spans, per-word start times, char-fraction fallback
-let kWords=[], kTimes=null, kCharCum=[], kActive=-1, kRAF=0;
+const thread = el('thread');
+let convo = [];               // [{role, content}] for the model
+let busy = false, started = false, turn = 0;
 
-/* ---- header wordmark + panel reflect the real name ---- */
-el('mark').innerHTML = 'M<b>i</b>a';
-
-
-/* ---- chips: each plays a pre-recorded Luna clip (free, instant, no API) ---- */
+/* ---- suggestion chips ---- */
 (function buildChips(){
-  const wrap=el('chips');
-  [["built","What he's built"],["build","What he'd build you"],["test","Test her live"]].forEach(function(pair){
-    const g=pair[0], label=pair[1];
-    const grp=document.createElement('div'); grp.className='chipgroup';
-    const lb=document.createElement('div'); lb.className='cglbl mono'; lb.textContent=label; grp.appendChild(lb);
-    const row=document.createElement('div'); row.className='chiprow';
-    CHIPS.filter(function(c){return c.g===g;}).forEach(function(c){
-      const b=document.createElement('button'); b.className='chip'; b.textContent=c.q;
-      b.addEventListener('click',function(){playPill(c);});
+  const wrap = el('suggest');
+  GROUPS.forEach(g=>{
+    const grp=document.createElement('div'); grp.className='sgroup';
+    const lb=document.createElement('div'); lb.className='slabel'; lb.textContent=g.label; grp.appendChild(lb);
+    const row=document.createElement('div'); row.className='srow';
+    g.chips.forEach(c=>{
+      const q = typeof c==='string' ? c : c.q;
+      const b=document.createElement('button'); b.className='chip'+(c.lead?' lead':''); b.textContent=q;
+      b.addEventListener('click',()=>{ if(c.lead) leadDemo(q); else send(q); });
       row.appendChild(b);
     });
     grp.appendChild(row); wrap.appendChild(grp);
   });
 })();
 
-// A pill: show its scripted answer and play its pre-recorded clip. No Claude, no ElevenLabs.
-function playPill(pill){
+/* ---- messages ---- */
+function nowTime(){ const d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function scrollDown(){ requestAnimationFrame(()=>{ thread.scrollTop = thread.scrollHeight; }); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function addMsg(who, text){
+  const m=document.createElement('div'); m.className='msg '+(who==='Mia'?'mia':'you');
+  const label = who==='Mia' ? 'Mia' : 'You';
+  let inner = '<div class="mtop"><span class="mwho">'+label+'</span><span class="mtime mono">'+nowTime()+'</span></div>'
+    + '<div class="bubble">'+esc(text)+'</div>';
+  if(who==='Mia'){
+    inner += '<span class="spk"><i></i><i></i><i></i><i></i><i></i></span>'
+      + '<button class="replay" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>Play</button>';
+  }
+  m.innerHTML=inner;
+  thread.appendChild(m); scrollDown();
+  if(who==='Mia'){ m.querySelector('.replay').addEventListener('click',()=>{ setSpeaking(m); speak(text,()=>clearSpeaking(m)); }); }
+  return m;
+}
+let typingEl=null;
+function showTyping(){
+  hideTyping();
+  typingEl=document.createElement('div'); typingEl.className='msg mia typing';
+  typingEl.innerHTML='<div class="mtop"><span class="mwho">Mia</span></div><div class="bubble"><i></i><i></i><i></i></div>';
+  thread.appendChild(typingEl); scrollDown();
+}
+function hideTyping(){ if(typingEl){ typingEl.remove(); typingEl=null; } }
+
+let speakingBubble=null;
+function setSpeaking(m){ clearSpeaking(); speakingBubble=m; m.classList.add('speaking'); }
+function clearSpeaking(m){ const b=m||speakingBubble; if(b) b.classList.remove('speaking'); if(!m||m===speakingBubble) speakingBubble=null; }
+
+function setStatus(s){ const b=el('bstat'); if(s==='typing') b.innerHTML='<span class="on">● typing…</span>'; else if(s==='speaking') b.innerHTML='<span class="on">● speaking</span>'; else b.innerHTML='<span class="on">● Online</span><span class="sfx"> · PropSight front desk</span>'; }
+
+/* ============================================================================
+   4) ASK  -  send a message, get Mia's reply, show + speak it
+   ============================================================================ */
+const FALLBACK = "Give me one more go, that dropped for a second. Ask me again?";
+async function send(text){
   if(!started) return;
-  const my=++turn; busy=true;             // any pill interrupts whatever is talking (speakClip cuts it)
-  pushHistory('You',pill.q); convo.push({role:'user',content:pill.q});
-  showNow('Mia',pill.a); pushHistory('Mia',pill.a);
-  convo.push({role:'assistant',content:pill.a});
-  speakClip(pill.audio, pill.a, ()=>{ if(my===turn) busy=false; });
-  if(pill.lead) setTimeout(()=>{ if(my===turn) openLead(); }, 900);   // she guides them to the form as she talks
+  stopSpeaking();                        // a new message always takes over (interrupt any reply in flight)
+  const my=++turn; busy=true;
+  // safety: never let a wedged turn freeze the composer. Re-checks so it won't cut a live reply.
+  clearTimeout(send._g);
+  (function arm(){ send._g=setTimeout(()=>{
+    if(turn!==my || !busy) return;
+    if(curAudio && !curAudio.paused && !curAudio.ended){ arm(); return; }
+    stopSpeaking(); busy=false; setStatus('online');
+  }, 13000); })();
+  addMsg('You', text); convo.push({role:'user',content:text});
+  el('tin').value='';
+  showTyping(); setStatus('typing');
+  let reply=null;
+  if(CONFIG.workerUrl){
+    try{
+      const ctrl=new AbortController(), to=setTimeout(()=>ctrl.abort(),12000);
+      const r=await fetch(CONFIG.workerUrl,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({messages:convo}),signal:ctrl.signal});
+      clearTimeout(to);
+      const j=await r.json();
+      if(j && j.reply && !/say that again|lost my connection|brain hit an error/i.test(j.reply)) reply=j.reply;
+    }catch(e){ console.warn('live answer failed',e); }
+  }
+  if(my!==turn){ busy=false; return; }
+  hideTyping();
+  reply = reply || FALLBACK;
+  convo.push({role:'assistant',content:reply});
+  const m=addMsg('Mia', reply);
+  setStatus('speaking'); setSpeaking(m);
+  speak(reply, ()=>{ clearSpeaking(m); setStatus('online'); if(my===turn) busy=false; });
 }
 
-/* ---- lead capture showcase: Mia guides a visitor to leave their details ---- */
+/* ---- lead-capture showcase (special chip) ---- */
+const LEAD_INTRO = "Easy, let me show you. Say you're a client landing on your site at midnight. Give me your name and number, and watch what I do with it.";
 const LEAD_CONFIRM = "And that's a lead caught. It's yours now, it never slips away. On your own site, that's the client you'd have lost while you slept.";
+function leadDemo(q){
+  if(!started) return;
+  stopSpeaking();
+  const my=++turn; busy=true;
+  addMsg('You', q); convo.push({role:'user',content:q});
+  const m=addMsg('Mia', LEAD_INTRO); convo.push({role:'assistant',content:LEAD_INTRO});
+  setSpeaking(m); setStatus('speaking');
+  speakClip('audio/leadintro.mp3', LEAD_INTRO, ()=>{ clearSpeaking(m); setStatus('online'); if(my===turn) busy=false; });
+  setTimeout(()=>{ if(my===turn) openLead(); }, 1100);
+}
+
+/* ============================================================================
+   5) LEAD MODAL
+   ============================================================================ */
 const leadwrap=el('leadwrap');
 function openLead(){
   el('leadform').hidden=false; el('leaddone').hidden=true;
@@ -512,12 +454,12 @@ function openLead(){
 function closeLead(){ leadwrap.classList.remove('open'); leadwrap.setAttribute('aria-hidden','true'); }
 function submitLead(){
   const name=(el('ld_name').value||'').trim();
-  if(!name){ el('ld_name').focus(); return; }               // light validation: need at least a name
+  if(!name){ el('ld_name').focus(); return; }
   el('leaddonetitle').textContent='Caught, '+name.split(/\s+/)[0]+'.';
   el('leadform').hidden=true; el('leaddone').hidden=false;
-  showNow('Mia',LEAD_CONFIRM); pushHistory('Mia',LEAD_CONFIRM);
-  turn++; busy=false;                                        // end the pill turn cleanly (submitting mid-intro must not leave the mic stuck busy)
-  speakClip('audio/leadconfirm.mp3', LEAD_CONFIRM, ()=>{ busy=false; });   // she confirms out loud, instant + free
+  turn++; busy=false;
+  const m=addMsg('Mia', LEAD_CONFIRM); convo.push({role:'assistant',content:LEAD_CONFIRM});
+  setSpeaking(m); speakClip('audio/leadconfirm.mp3', LEAD_CONFIRM, ()=>clearSpeaking(m));
 }
 el('leadsend').addEventListener('click', submitLead);
 el('leadskip').addEventListener('click', closeLead);
@@ -527,392 +469,79 @@ el('ld_name').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDef
 el('ld_phone').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); submitLead(); } });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape' && leadwrap.classList.contains('open')) closeLead(); });
 
-/* ---- status + timecode ---- */
-function setState(label,live){
-  stateLabel.textContent=label; stateEl.dataset.live=live?'1':'0';
-  const sp=(label==='Speaking'); stateEl.classList.toggle('sp',sp);
-  if(stageEl) stageEl.classList.toggle('speaking',sp);
-}
-let t0=null;
-setInterval(()=>{
-  if(!t0) return;
-  const s=Math.floor((performance.now()-t0)/1000);
-  tcEl.textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
-},500);
-
-/* ---- transcript lines ---- */
-function showNow(who,text){
-  nowWho.textContent=who; nowWho.className='who'+(who!=='Mia'?' you':'');
-  nowEl.classList.remove('dim');
-  if(who==='Mia'){ renderWords(text); }               // Mia: word spans for follow-along
-  else { nowText.textContent=text; kWords=[]; kTimes=null; kActive=-1; }
-  const c=el('convo'); if(c) requestAnimationFrame(()=>{ c.scrollTop=nowEl.offsetTop; });
-}
-
-/* ---- follow-along highlight (karaoke): current word lit in ember, auto-scrolls ---- */
-function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function renderWords(text){
-  const words=text.split(/\s+/).filter(Boolean);
-  nowText.innerHTML=words.map(w=>'<span class="w">'+esc(w)+'</span>').join(' ');
-  kWords=Array.prototype.slice.call(nowText.querySelectorAll('.w'));
-  // char-proportional cumulative fractions — the fallback timing for LIVE answers
-  let total=0; const lens=words.map(w=>{ const L=w.length+1; total+=L; return L; });
-  let acc=0; kCharCum=lens.map(L=>{ const f=acc/(total||1); acc+=L; return f; });
-  kActive=-1; kTimes=null;
-}
-function setActiveWord(i){
-  if(i===kActive) return; kActive=i;
-  for(let j=0;j<kWords.length;j++){ const w=kWords[j]; w.classList.toggle('said',j<i); w.classList.toggle('on',j===i); }
-  if(kWords[i]) centerWord(kWords[i]);
-}
-function centerWord(w){
-  const c=el('convo'); if(!c) return;
-  const cr=c.getBoundingClientRect(), wr=w.getBoundingClientRect();
-  const rel=(wr.top-cr.top)+wr.height/2;                 // active word's centre within the box
-  if(rel<c.clientHeight*0.33 || rel>c.clientHeight*0.62) // only scroll when it drifts out of the middle band
-    c.scrollTo({top:c.scrollTop+rel-c.clientHeight/2, behavior:'smooth'});
-}
-function startKaraoke(my){
-  cancelAnimationFrame(kRAF);
-  const tick=()=>{
-    if(my!==speakToken||!ttsOn) return;                 // superseded / stopped -> self-cancel
-    const ct=curAudio?curAudio.currentTime:0, dur=curAudio?curAudio.duration:0;
-    let i=kActive;
-    if(kTimes&&kTimes.length){                           // exact per-word times (pre-recorded clips)
-      while(i+1<kTimes.length && ct>=kTimes[i+1]) i++;
-      if(i<0 && ct>=(kTimes[0]||0)) i=0;
-    } else if(dur&&isFinite(dur)&&kCharCum.length){      // estimate from duration (live answers)
-      const frac=ct/dur; i=-1; while(i+1<kCharCum.length && frac>=kCharCum[i+1]) i++;
-    }
-    if(i!==kActive) setActiveWord(i);
-    kRAF=requestAnimationFrame(tick);
-  };
-  kRAF=requestAnimationFrame(tick);
-}
-function stopNow(){
-  if(mode!=='speaking') return;
-  stopSpeaking(); busy=false; mode='idle'; setState('Ready',false);
-  document.querySelectorAll('.chip').forEach(c=>c.disabled=false);
-}
-stateEl.addEventListener('click',stopNow);
-if(stageEl) stageEl.addEventListener('click',()=>{ if(mode==='speaking') stopNow(); });
-function pushHistory(who,text){
-  const p=document.createElement('p'); p.innerHTML=`<b>${who}:</b> ${text}`;
-  histEl.prepend(p); while(histEl.children.length>3) histEl.lastChild.remove();
-}
-
 /* ============================================================================
-   5) VOICEPRINT  -  reactive equalizer on canvas
-   ============================================================================ */
-const cv=el('wave'), ctx=cv.getContext('2d');
-let mode='idle', energy=0, micData=null, W=0, Hh=0, dpr=1;
-const BARS=54;
-function sizeCanvas(){
-  dpr=Math.min(window.devicePixelRatio||1,2);
-  W=cv.clientWidth; Hh=cv.clientHeight;
-  cv.width=W*dpr; cv.height=Hh*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
-}
-window.addEventListener('resize',sizeCanvas);
-let phase=0;
-function draw(){
-  requestAnimationFrame(draw);
-  if(!W){sizeCanvas(); if(!W) return;}
-  ctx.clearRect(0,0,W,Hh);
-  const mid=Hh/2, gap=W/BARS, bw=Math.max(2,gap*0.34);
-  phase+=0.05; energy*=0.90;
-  for(let i=0;i<BARS;i++){
-    const x=i*gap+gap/2;
-    const centerBias=1-Math.abs(i-(BARS-1)/2)/((BARS-1)/2); // taller in middle
-    let amp;
-    if(mode==='listening'&&micData){
-      const v=micData[Math.floor(i/BARS*micData.length)]/255;
-      amp=v*(0.35+0.65*centerBias);
-    }else if(mode==='listening'){
-      // iOS keeps the mic off the AudioContext, so there's no analyser tap — animate a
-      // lively synthetic "listening" pulse so the voiceprint still reads as alive.
-      const wob=0.5+0.5*Math.sin(phase*1.7+i*0.55);
-      amp=0.16+0.5*centerBias*(0.4+0.6*wob);
-    }else if(mode==='speaking'){
-      // synthetic "talking" motion (clips play as a plain audio element, so there's no
-      // analyser tap now) — lively pulse + wobble so the voiceprint reads as alive.
-      const wobble=0.5+0.5*Math.sin(phase*2+i*0.7)*Math.sin(phase*0.6+i);
-      const pulse=0.45+0.3*Math.abs(Math.sin(phase*2.3+i*0.35));
-      amp=pulse*(0.4+0.6*centerBias)*(0.55+0.45*wobble);
-    }else if(mode==='thinking'){
-      const trav=Math.exp(-Math.pow(((i/BARS)- ((phase*0.12)%1))*6,2));
-      amp=0.06+trav*0.5*centerBias+0.03*Math.sin(phase+i);
-    }else{ // idle: a calm breathing wave, quiet but clearly alive
-      const wave=Math.sin(phase*0.5+i*0.26);
-      amp=0.11+0.11*centerBias*(0.5+0.5*wave)+0.03*Math.sin(phase*1.4+i*0.5);
-    }
-    const h=Math.max(2,amp*mid*1.7);
-    const on=(mode!=='idle');
-    const alpha=on?(0.5+0.5*centerBias):(0.30+0.34*centerBias);
-    ctx.fillStyle=`rgba(255,106,43,${alpha})`;
-    const r=Math.min(bw/2,h);
-    roundBar(x-bw/2,mid-h,bw,h*2,r);
-  }
-}
-function roundBar(x,y,w,h,r){
-  ctx.beginPath();
-  ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);
-  ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();ctx.fill();
-}
-sizeCanvas(); draw();
-
-/* ============================================================================
-   6) MICROPHONE analyser (for listening reactivity) + push-to-talk STT
-   ============================================================================ */
-let audioCtx=null, analyser=null, micStream=null;
-// iOS routes ANY mic-touched AudioContext, and audio played through it, to the quiet
-// earpiece ("call mode"). It flips on once the mic opens, which is why live voice went
-// soft / earpiece only sometimes. So on iOS we keep AudioContext out of the loop entirely:
-// speech recognition runs its own mic, the visualizer stays synthetic, and live voice
-// plays as a plain <audio> element on the loudspeaker (like the clips already do).
-const IS_IOS = /iP(hone|od|ad)/.test(navigator.platform)
-  || (/Mac/.test(navigator.platform) && navigator.maxTouchPoints > 1)
-  || /iPhone|iPad|iPod/i.test(navigator.userAgent);
-async function initMic(){
-  if(IS_IOS) return false;      // never attach the mic to an AudioContext on iOS (forces earpiece)
-  if(analyser) return true;
-  try{
-    micStream=await navigator.mediaDevices.getUserMedia({audio:true});
-    if(!audioCtx){ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }  // REUSE the playback context, never replace it
-    const src=audioCtx.createMediaStreamSource(micStream);
-    analyser=audioCtx.createAnalyser(); analyser.fftSize=64;
-    src.connect(analyser); micData=new Uint8Array(analyser.frequencyBinCount);
-    return true;
-  }catch(e){ console.warn('mic denied / unavailable',e); return false; }
-}
-// Release the mic so the phone leaves call-mode and playback goes loud again.
-function releaseMic(){
-  try{ if(micStream) micStream.getTracks().forEach(t=>t.stop()); }catch(e){}
-  micStream=null; analyser=null; micData=null;   // re-init on the next hold (permission is remembered)
-}
-function pumpMic(){ if(mode==='listening'&&analyser){ analyser.getByteFrequencyData(micData); requestAnimationFrame(pumpMic);} }
-
-const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-let recog=null, heard='', recognizing=false;
-// A FRESH recognizer every time: the browser's speech recognition often dies after one use
-// (esp. on phones), so reusing one instance is why the 2nd question sometimes did nothing.
-function makeRecog(){
-  if(!SR) return null;
-  const r=new SR(); r.lang='en-US'; r.interimResults=true; r.continuous=false;
-  r.onresult=e=>{ let t=''; for(let i=e.resultIndex;i<e.results.length;i++) t+=e.results[i][0].transcript; heard=t.trim(); if(heard) showNow('You',heard); };
-  r.onend=()=>{ recognizing=false; };
-  r.onerror=()=>{ recognizing=false; };
-  return r;
-}
-function startListen(){
-  if(!started) return;
-  heard='';
-  mode='listening'; setState('Listening',true);
-  showNow('You','...');
-  if(!analyser) initMic();      // open the mic lazily, only while holding to talk
-  try{ if(recog) recog.abort(); }catch(e){}   // discard any stale recognizer
-  recog=makeRecog();
-  if(recog){ try{ recog.start(); recognizing=true; }catch(e){} }
-  pumpMic();
-}
-function endListen(){
-  if(mode!=='listening') return;
-  if(recog&&recognizing){ try{ recog.stop(); }catch(e){} }
-  releaseMic();                 // let go of the mic so Mia plays loud again (esp. on phones)
-  mode='idle'; setState('Ready',false);
-  setTimeout(()=>{ if(heard) ask(heard); else nowEl.classList.add('dim'); },120);
-}
-
-/* push-to-talk bindings (mouse, touch, spacebar) with barge-in */
-const ptt=el('ptt');
-function readyToTalk(){
-  if(!started) return false;
-  // Every new hold TAKES OVER: cancel whatever the previous turn was doing (talking, thinking,
-  // or wedged) and free the mic. This is why "the 2nd time nothing happened" - a stuck turn
-  // was blocking it. Now the mic can never be blocked.
-  stopSpeaking(); busy=false; turn++; mode='idle';
-  document.querySelectorAll('.chip').forEach(c=>c.disabled=false);
-  return true;
-}
-const down=e=>{ e.preventDefault(); if(!readyToTalk()) return; ptt.classList.add('holding'); startListen(); };
-const up=e=>{ e.preventDefault(); ptt.classList.remove('holding'); endListen(); };
-ptt.addEventListener('pointerdown',down);
-ptt.addEventListener('pointerup',up);
-ptt.addEventListener('pointerleave',()=>{ if(mode==='listening'){ptt.classList.remove('holding');endListen();} });
-let spaceHeld=false;
-const typingNow=()=>{ const a=document.activeElement; return a && (a.tagName==='INPUT' || a.tagName==='TEXTAREA'); };
-window.addEventListener('keydown',e=>{ if(e.code==='Space'&&!spaceHeld&&started&&!typingNow()){ e.preventDefault(); if(!readyToTalk())return; spaceHeld=true;ptt.classList.add('holding');startListen(); }});
-window.addEventListener('keyup',e=>{ if(e.code==='Space'&&spaceHeld){ e.preventDefault();spaceHeld=false;ptt.classList.remove('holding');endListen(); }});
-
-/* text input: type instead of talk - 100% reliable, no mic needed, works everywhere */
-const tin=el('tin');
-function sendTyped(){
-  const t=(tin.value||'').trim(); if(!t||!started) return;
-  tin.value='';
-  if(busy){ stopSpeaking(); busy=false; }   // interrupt whatever's happening, then answer
-  ask(t);
-}
-el('tsend').addEventListener('click',sendTyped);
-tin.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); sendTyped(); } });
-
-/* ============================================================================
-   7) VOICE OUT  -  browser speech synthesis
+   6) VOICE OUT  -  worker TTS (Luna), browser-voice fallback
    ============================================================================ */
 let voices=[], chosenVoice=null;
 function pickVoice(){
-  voices=speechSynthesis.getVoices();
-  if(!voices.length) return;
-  console.log('Voices available:',voices.map(v=>v.name+' ('+v.lang+')'));
+  voices=speechSynthesis.getVoices(); if(!voices.length) return;
   if(CONFIG.voiceName){ chosenVoice=voices.find(v=>v.name===CONFIG.voiceName)||null; }
-  if(!chosenVoice){
-    const pref=['Google UK English Female','Samantha','Google US English','Karen','Serena','Moira','Tessa'];
-    for(const name of pref){ const v=voices.find(v=>v.name===name); if(v){chosenVoice=v;break;} }
-  }
+  if(!chosenVoice){ for(const n of ['Samantha','Google US English','Karen','Serena','Moira']){ const v=voices.find(v=>v.name===n); if(v){chosenVoice=v;break;} } }
   if(!chosenVoice) chosenVoice=voices.find(v=>/^en/i.test(v.lang))||voices[0];
 }
 speechSynthesis.onvoiceschanged=pickVoice; pickVoice();
 
-let curUtter=null, ttsAudio=null, ttsOn=false, speakToken=0;
-let curAudio=null;   // the audio element currently playing (greeting / pill / live), so Stop can pause it
-
-// LIVE voice: fetch Luna speech for free-form text from the worker, play it, fall back to
-// the browser voice if that fails.
+let curUtter=null, ttsAudio=null, speakToken=0, curAudio=null;
 function speak(text,done){
-  stopSpeaking();
-  const my=++speakToken;
-  mode='speaking'; setState('Speaking',true); energy=0.6;
-  if(CONFIG.useElevenLabs && CONFIG.workerUrl){
-    liveSpeak(text,my,done).catch(e=>{ if(my===speakToken){ console.warn('live voice failed, using browser voice',e); browserSpeak(text,done); } });
-  }else{
-    browserSpeak(text,done);
-  }
+  stopSpeaking(); const my=++speakToken;
+  if(CONFIG.useWorkerVoice && CONFIG.workerUrl){
+    workerSpeak(text,my,done).catch(e=>{ if(my===speakToken){ console.warn('voice failed, browser voice',e); browserSpeak(text,done); } });
+  }else browserSpeak(text,done);
 }
-async function liveSpeak(text,my,done){
-  const r=await fetch(CONFIG.workerUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+async function workerSpeak(text,my,done){
+  const ctrl=new AbortController(), to=setTimeout(()=>ctrl.abort(),11000);
+  let r; try{ r=await fetch(CONFIG.workerUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text}),signal:ctrl.signal}); }finally{ clearTimeout(to); }
   if(!r.ok) throw new Error('tts '+r.status);
   if(!/audio/i.test(r.headers.get('content-type')||'')) throw new Error('not audio');
-  const buf=await r.arrayBuffer();
-  if(my!==speakToken) return;
-  // ONE clip through the exact same plain path as the pills (proven, robust).
+  const buf=await r.arrayBuffer(); if(my!==speakToken) return;
   await voicePlay(URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'})), my, done);
 }
-
-// PRE-RECORDED voice: play a stored Luna clip (greeting + pills). Free, instant, consistent.
 function speakClip(src, fallbackText, done){
-  stopSpeaking();
-  const my=++speakToken;
-  mode='speaking'; setState('Speaking',true); energy=0.6;
-  // load exact per-word timings alongside the clip (e.g. audio/sys0.json) for follow-along
-  fetch(src.replace('.mp3','.json')).then(r=>r.ok?r.json():null)
-    .then(d=>{ if(my===speakToken && d && d.t) kTimes=d.t; }).catch(()=>{});
-  voicePlay(src, my, done).catch(e=>{ if(my===speakToken){ console.warn('clip failed, using live voice',e); speak(fallbackText||'', done); } });
+  stopSpeaking(); const my=++speakToken;
+  voicePlay(src, my, done).catch(e=>{ if(my===speakToken){ console.warn('clip failed',e); speak(fallbackText||'', done); } });
 }
-
-// Low-level player: a plain <audio> element (NOT routed through the AudioContext). On iOS,
-// audio piped through Web Audio is treated as call audio (earpiece + soft); a bare <audio>
-// element plays out the loudspeaker. The voiceprint animates synthetically while speaking.
 async function voicePlay(src, my, done){
-  if(my!==speakToken) return;                        // superseded (barge-in / newer reply)
+  if(my!==speakToken) return;
   if(!ttsAudio){ ttsAudio=new Audio(); ttsAudio.playsInline=true; ttsAudio.preload='auto'; }
   ttsAudio.src=src; ttsAudio.volume=1; curAudio=ttsAudio;
-  const finish=()=>{ if(my===speakToken){ ttsOn=false; mode='idle'; setState('Ready',false); done&&done(); } if(src&&src.indexOf('blob:')===0){ try{URL.revokeObjectURL(src);}catch(e){} } };
+  const finish=()=>{ if(my===speakToken){ done&&done(); } if(src&&src.indexOf('blob:')===0){ try{URL.revokeObjectURL(src);}catch(e){} } };
   ttsAudio.onended=finish; ttsAudio.onerror=finish;
-  ttsOn=true; startKaraoke(my);
   await ttsAudio.play();
 }
-
 function browserSpeak(text,done){
-  mode='speaking'; setState('Speaking',true); energy=0.6;
-  document.querySelectorAll('#nowText .w').forEach(w=>w.classList.add('said'));  // no karaoke on browser voice -> show text bright, not dimmed
-  const spoken=String(text).replace(/\bMIA\b/gi, CONFIG.sayName);  // fix name pronunciation
+  const spoken=String(text).replace(/\bMIA\b/gi, CONFIG.sayName);
   const u=new SpeechSynthesisUtterance(spoken);
   if(chosenVoice) u.voice=chosenVoice;
   u.rate=CONFIG.speechRate; u.pitch=CONFIG.speechPitch;
-  u.onboundary=()=>{ energy=Math.min(1,energy+0.5); };
-  u.onend=()=>{ if(curUtter===u){ mode='idle'; setState('Ready',false); curUtter=null; done&&done(); } };
+  u.onend=()=>{ if(curUtter===u){ curUtter=null; done&&done(); } };
   curUtter=u; speechSynthesis.speak(u);
-  clearTimeout(browserSpeak._t); browserSpeak._t=setTimeout(()=>{ if(curUtter===u&&!speechSynthesis.speaking){ u.onend(); } }, Math.max(2500,text.length*90));
+  clearTimeout(browserSpeak._t); browserSpeak._t=setTimeout(()=>{ if(curUtter===u&&!speechSynthesis.speaking){ u.onend(); } }, Math.max(2500,text.length*80));
 }
-
 function stopSpeaking(){
-  speakToken++; ttsOn=false; cancelAnimationFrame(kRAF);
-  if(curAudio){ try{ curAudio.pause(); }catch(e){} }               // whatever's playing right now (greeting / pill / live clip)
+  speakToken++;
+  if(curAudio){ try{ curAudio.pause(); }catch(e){} }
   if(ttsAudio){ try{ ttsAudio.pause(); ttsAudio.currentTime=0; }catch(e){} }
   if(speechSynthesis.speaking||curUtter){ curUtter=null; speechSynthesis.cancel(); }
 }
 
-/* ============================================================================
-   8) ASK  -  route a user turn to the brain, speak the answer
-   ============================================================================ */
-async function ask(text){
-  if(busy) return; const my=++turn; busy=true;         // a pill can supersede this turn
-  // Last-resort safety: never let a wedged turn leave the mic permanently busy. If this turn
-  // is somehow still busy after a long ceiling (far longer than any real reply), free it so
-  // the next hold-to-talk always works.
-  clearTimeout(ask._guard);
-  (function arm(){ ask._guard=setTimeout(()=>{
-    if(turn!==my || !busy) return;                                        // turn finished or superseded
-    if(curAudio && !curAudio.paused && !curAudio.ended){ arm(); return; } // still talking -> never cut a live reply
-    stopSpeaking(); busy=false; mode='idle'; setState('Ready',false);     // genuinely wedged -> free the mic
-  }, 12000); })();
-  pushHistory('You',text); showNow('You',text);
-  convo.push({role:'user',content:text});
-
-  mode='thinking'; setState('Thinking',true);
-
-  // Safe scripted answer for this question — used as the offline-demo reply AND
-  // as the instant fallback if a live call fails or times out. Never dead air.
-  const hit=CHIPS.find(c=>c.q.toLowerCase()===text.toLowerCase());
-  let reply = hit ? hit.a : nextFallback();
-
-  // LIVE: one Claude call for the whole reply. If it fails or times out, we keep the scripted
-  // answer above, so there's never dead air. (Simple + robust; the voice is one clip below.)
-  if(CONFIG.workerUrl){
-    try{
-      const ctrl=new AbortController(), to=setTimeout(()=>ctrl.abort(),10000);
-      const r=await fetch(CONFIG.workerUrl,{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({messages:convo}),signal:ctrl.signal});
-      clearTimeout(to);
-      const j=await r.json();
-      const bad=!j||!j.reply||/say that again|lost my connection|brain hit an error/i.test(j.reply);
-      if(!bad) reply=j.reply;
-    }catch(e){ console.warn('live answer failed, using scripted fallback',e); }
-  }else{
-    await wait(650+Math.random()*500);               // offline demo: feel of thinking
-  }
-
-  if(my!==turn) return;                                // a pill took over while we were thinking
-  convo.push({role:'assistant',content:reply});
-  showNow('Mia',reply); pushHistory('Mia',reply);
-  speak(reply,()=>{ if(my===turn) busy=false; });
-}
-const wait=ms=>new Promise(r=>setTimeout(r,ms));
+/* ---- composer ---- */
+const tin=el('tin');
+function sendTyped(){ const t=(tin.value||'').trim(); if(!t) return; send(t); }
+el('tsend').addEventListener('click',sendTyped);
+tin.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); sendTyped(); } });
 
 /* ============================================================================
-   9) START  -  cold open
+   7) START
    ============================================================================ */
 el('begin').addEventListener('click',()=>{
   el('veil').classList.add('gone');
-  started=true; t0=performance.now();
-  // DON'T create an AudioContext or open the mic here. On iOS both push audio to the
-  // quiet earpiece ("call mode"). The greeting is a plain <audio> element played inside
-  // this tap, so it comes out the loudspeaker. The mic (and its AudioContext) open
-  // lazily only on the first hold-to-talk (see startListen).
-  // speak the opening line directly (instant, reliable, no model call).
-  // NOTE: do NOT push it into `convo` — the API rejects a history that starts
-  // with an assistant turn, which broke the first pill/question.
-  showNow('Mia',OPENING);
-  speakClip('audio/greeting.mp3', OPENING);   // plays within the tap gesture -> sounds on mobile
-  // On desktop/Android, create + resume the AudioContext INSIDE this tap so it's RUNNING for
-  // the boosted live path. Skipped on iOS on purpose: any AudioContext there routes audio to
-  // the earpiece, so iOS stays entirely on the plain loudspeaker path (clips AND live voice).
-  if(SR && !IS_IOS){
-    if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
-    if(audioCtx && audioCtx.state==='suspended'){ audioCtx.resume().catch(()=>{}); }
-  }
+  started=true;
+  const m=addMsg('Mia', OPENING);
+  setSpeaking(m);
+  // greeting is a plain <audio> element played inside this tap -> loudspeaker on mobile
+  speakClip('audio/greeting.mp3', OPENING, ()=>clearSpeaking(m));
+  setTimeout(()=>{ try{ tin.focus({preventScroll:true}); }catch(e){} }, 500);
 });
-
-/* browser support note */
-if(!SR){ el('warnBrowser').textContent='Live voice input needs Chrome on desktop. You can still tap the questions below.'; }
 </script>
 </body>
 </html>
