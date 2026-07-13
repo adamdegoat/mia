@@ -211,15 +211,17 @@ footer{
 .veil{
   position:fixed;inset:0;z-index:20;background:var(--ink);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:30px;text-align:center;padding:24px;
+  gap:22px;text-align:center;padding:24px;
   transition:opacity .6s ease;
 }
 .veil.gone{opacity:0;pointer-events:none}
 .veil .big{
   font-size:clamp(40px,9vw,96px);font-weight:700;letter-spacing:-.02em;line-height:1;
+  margin-bottom:2px;
 }
 .veil .big b{color:var(--ember)}
-.veil .line{color:var(--muted);max-width:30ch;font-size:clamp(15px,1.4vw,18px);line-height:1.5}
+.veil .tagline{max-width:22ch;font-size:clamp(20px,2.4vw,29px);font-weight:500;line-height:1.35;letter-spacing:-.01em;color:var(--text)}
+.veil .line{color:var(--muted-2);max-width:32ch;font-size:clamp(14px,1.3vw,16px);line-height:1.5;margin-top:-6px}
 .begin{
   appearance:none;border:1px solid var(--line-2);cursor:pointer;
   background:transparent;color:var(--text);
@@ -315,7 +317,8 @@ footer{
 
 <div class="veil" id="veil">
   <div class="big">M<b>i</b>a</div>
-  <div class="line">A live system, not a slide. Tap to let her introduce herself, then ask her anything.</div>
+  <div class="tagline">Your 24/7 front desk. She greets every client, answers their questions, and never misses a lead.</div>
+  <div class="line">A live system, not a slide. Tap to meet her.</div>
   <button class="begin" id="begin"><span class="d"></span>Begin</button>
 </div>
 <div class="warn" id="warnBrowser"></div>
