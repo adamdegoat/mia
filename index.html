@@ -561,13 +561,11 @@ function draw(){
       const v=micData[Math.floor(i/BARS*micData.length)]/255;
       amp=v*(0.35+0.65*centerBias);
     }else if(mode==='speaking'){
-      if(ttsOn && ttsData){                             // react to Christine's real voice
-        const v=ttsData[Math.floor(i/BARS*ttsData.length)]/255;
-        amp=(0.05+v*1.15)*(0.42+0.58*centerBias);
-      }else{
-        const wobble=0.5+0.5*Math.sin(phase*2+i*0.7)*Math.sin(phase*0.6+i);
-        amp=(0.12+energy*0.9)*(0.4+0.6*centerBias)*(0.55+0.45*wobble);
-      }
+      // synthetic "talking" motion (clips play as a plain audio element, so there's no
+      // analyser tap now) — lively pulse + wobble so the voiceprint reads as alive.
+      const wobble=0.5+0.5*Math.sin(phase*2+i*0.7)*Math.sin(phase*0.6+i);
+      const pulse=0.45+0.3*Math.abs(Math.sin(phase*2.3+i*0.35));
+      amp=pulse*(0.4+0.6*centerBias)*(0.55+0.45*wobble);
     }else if(mode==='thinking'){
       const trav=Math.exp(-Math.pow(((i/BARS)- ((phase*0.12)%1))*6,2));
       amp=0.06+trav*0.5*centerBias+0.03*Math.sin(phase+i);
@@ -724,29 +722,16 @@ function speakClip(src, fallbackText, done){
 // low-level player: routes any audio URL through gain -> peak limiter -> out (+ voiceprint tap).
 async function voicePlay(src, my, done, gain){
   if(my!==speakToken) return;                        // superseded (barge-in / newer reply)
-  if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
-  if(!ttsAudio){ ttsAudio=new Audio(); ttsAudio.volume=1; }
-  ttsAudio.src=src;
-  try{
-    if(audioCtx && !ttsSource){                      // wire graph once
-      ttsSource=audioCtx.createMediaElementSource(ttsAudio);
-      ttsAnalyser=audioCtx.createAnalyser(); ttsAnalyser.fftSize=64;
-      ttsData=new Uint8Array(ttsAnalyser.frequencyBinCount);
-      ttsGain=audioCtx.createGain();
-      // PEAK limiter: high threshold so it only clamps the loudest spikes, never
-      // squashing the body of the speech (that squashing was the soft/loud pumping).
-      const lim=audioCtx.createDynamicsCompressor();
-      lim.threshold.value=-1; lim.knee.value=0; lim.ratio.value=20;
-      lim.attack.value=0.002; lim.release.value=0.12;
-      ttsSource.connect(ttsAnalyser);                  // tap for the voiceprint
-      ttsSource.connect(ttsGain); ttsGain.connect(lim); lim.connect(audioCtx.destination);
-    }
-    if(ttsGain) ttsGain.gain.value = gain || 1;
-    if(audioCtx && audioCtx.state==='suspended') await audioCtx.resume();
-  }catch(e){}
+  // PLAIN audio element, NOT routed through the AudioContext. On iOS, audio piped
+  // through Web Audio gets treated as call audio (routes to the earpiece + goes soft);
+  // a bare <audio> element plays out the loudspeaker at full volume. The clips are
+  // already loudness-matched, so they don't need the old gain/limiter graph. The
+  // voiceprint animates synthetically while speaking (see draw()).
+  if(!ttsAudio){ ttsAudio=new Audio(); ttsAudio.playsInline=true; ttsAudio.preload='auto'; }
+  ttsAudio.src=src; ttsAudio.volume=1;
   const finish=()=>{ if(my===speakToken){ ttsOn=false; mode='idle'; setState('Ready',false); done&&done(); } if(src&&src.indexOf('blob:')===0){ try{URL.revokeObjectURL(src);}catch(e){} } };
   ttsAudio.onended=finish; ttsAudio.onerror=finish;
-  ttsOn=true; pumpTts(); startKaraoke(my);
+  ttsOn=true; startKaraoke(my);
   await ttsAudio.play();
 }
 function pumpTts(){ if(ttsOn && ttsAnalyser){ ttsAnalyser.getByteFrequencyData(ttsData); requestAnimationFrame(pumpTts); } }
@@ -817,12 +802,10 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
 el('begin').addEventListener('click',()=>{
   el('veil').classList.add('gone');
   started=true; t0=performance.now();
-  // Create + resume the audio context INSIDE this tap, and DON'T open the mic yet.
-  // On phones, asking for mic permission first "uses up" the tap and blocks the
-  // greeting audio; opening the mic also drops playback into quiet call-mode. So the
-  // mic is opened lazily on the first hold-to-talk instead (see startListen).
-  if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
-  if(audioCtx&&audioCtx.state==='suspended') audioCtx.resume();
+  // DON'T create an AudioContext or open the mic here. On iOS both push audio to the
+  // quiet earpiece ("call mode"). The greeting is a plain <audio> element played inside
+  // this tap, so it comes out the loudspeaker. The mic (and its AudioContext) open
+  // lazily only on the first hold-to-talk (see startListen).
   // speak the opening line directly (instant, reliable, no model call).
   // NOTE: do NOT push it into `convo` — the API rejects a history that starts
   // with an assistant turn, which broke the first pill/question.
