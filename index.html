@@ -50,16 +50,13 @@ body::after{
 .app{
   height:100%;height:100dvh;
   display:grid;
-  grid-template-columns:minmax(0,1.55fr) minmax(0,.95fr);
   grid-template-rows:auto minmax(0,1fr) auto;
-  grid-template-areas:"header header" "stage panel" "footer footer";
-  column-gap:clamp(20px,3vw,48px);
-  max-width:1440px;margin:0 auto;
+  grid-template-areas:"header" "stage" "footer";
+  max-width:940px;margin:0 auto;
   padding:clamp(16px,2.2vw,30px);
 }
 header{grid-area:header}
 .stage{grid-area:stage}
-.panel{grid-area:panel}
 footer{grid-area:footer}
 
 /* ---------- header ---------- */
@@ -106,18 +103,18 @@ header{
   100%{box-shadow:0 0 0 0 rgba(255,106,43,0)}
 }
 
-/* ---------- stage ---------- */
+/* ---------- stage (single focused column) ---------- */
 .stage{
   display:flex;flex-direction:column;justify-content:flex-start;
   min-height:0;overflow:hidden;position:relative;
 }
 .wave{
-  width:100%;height:clamp(110px,16vh,175px);display:block;flex:0 0 auto;
+  width:100%;height:clamp(120px,18vh,190px);display:block;flex:0 0 auto;
 }
 .convo{
   flex:1 1 auto;min-height:0;overflow-y:auto;position:relative;
-  display:flex;flex-direction:column;
-  padding-top:clamp(12px,2.2vh,24px);
+  display:flex;flex-direction:column;align-items:center;text-align:center;
+  padding-top:clamp(14px,2.6vh,28px);
   scrollbar-width:none;
 }
 .convo::-webkit-scrollbar{display:none}
@@ -126,13 +123,13 @@ header{
   mask-image:linear-gradient(to bottom,#000 82%,transparent);
 }
 .now{
-  font-size:clamp(20px,2vw,28px);
-  font-weight:500;line-height:1.32;letter-spacing:-.01em;
-  max-width:21em;min-height:0;
+  font-size:clamp(21px,2.1vw,29px);
+  font-weight:500;line-height:1.34;letter-spacing:-.01em;
+  max-width:28em;min-height:0;margin:0 auto;
   overflow-wrap:break-word;word-break:break-word;
   transition:opacity .5s ease;
 }
-.stage,.panel,.convo{min-width:0}
+.stage,.convo{min-width:0}
 .now.dim{opacity:.18}
 #nowText .w{color:var(--muted-2);transition:color .18s ease,text-shadow .18s ease}
 #nowText .w.said{color:var(--text)}
@@ -148,47 +145,19 @@ header{
 }
 .now .who.you{color:var(--muted)}
 .history{
-  display:flex;flex-direction:column;gap:6px;
-  max-width:34ch;margin-bottom:14px;
+  display:flex;flex-direction:column;gap:6px;align-items:center;
+  max-width:40ch;margin:0 auto 16px;
 }
 .history p{
   margin:0;font-size:14px;line-height:1.4;color:var(--muted-2);
 }
 .history p b{color:var(--muted);font-weight:400}
 
-/* ---------- capability panel ---------- */
-.panel{
-  border-left:1px solid var(--line);
-  padding-left:clamp(20px,2.4vw,34px);
-  display:flex;flex-direction:column;min-height:0;
-}
-.panel h2{
-  font-family:"Space Mono",monospace;font-weight:400;
-  font-size:11px;letter-spacing:.24em;text-transform:uppercase;
-  color:var(--muted-2);margin:0 0 clamp(16px,2vh,22px);
-}
-.caps{display:flex;flex-direction:column;gap:2px;overflow:hidden}
-.cap{
-  padding:clamp(11px,1.5vh,15px) 0 clamp(11px,1.5vh,15px) 16px;
-  border-left:2px solid transparent;
-  margin-left:-1px;
-  opacity:.5;transition:opacity .45s ease,border-color .45s ease,transform .45s ease;
-}
-.cap .t{font-size:clamp(15px,1.15vw,18px);font-weight:600;letter-spacing:-.01em}
-.cap .e{font-size:13px;line-height:1.45;color:var(--muted);margin-top:5px;
-  max-height:0;overflow:hidden;opacity:0;transition:max-height .45s ease,opacity .45s ease,margin .45s ease}
-.cap.on{
-  opacity:1;border-color:var(--ember);
-  background:linear-gradient(90deg,var(--ember-soft),transparent 82%);
-}
-.cap.on .t{color:var(--text)}
-.cap.on .e{max-height:5em;opacity:1}
-
 /* ---------- footer / controls ---------- */
 footer{
   padding-top:clamp(16px,2vh,22px);
   border-top:1px solid var(--line);
-  display:flex;align-items:center;gap:clamp(14px,2vw,26px);
+  display:flex;align-items:center;justify-content:center;gap:clamp(14px,2vw,26px);
   flex-wrap:wrap;
 }
 .ptt{
@@ -207,10 +176,10 @@ footer{
 .ptt:focus-visible{outline:2px solid var(--ember-2);outline-offset:3px}
 .hint{font-size:12px;color:var(--muted-2);letter-spacing:.02em;flex:0 0 auto}
 .hint b{color:var(--muted);font-weight:400}
-.chips{display:flex;flex-direction:column;gap:14px;width:100%;flex:1 1 100%;margin:4px 0 0}
-.chipgroup{min-width:0}
-.cglbl{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted-2);margin-bottom:8px}
-.chiprow{display:flex;gap:8px;flex-wrap:wrap}
+.chips{display:flex;flex-direction:column;align-items:center;gap:15px;width:100%;flex:1 1 100%;margin:4px 0 0}
+.chipgroup{min-width:0;width:100%}
+.cglbl{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted-2);margin-bottom:9px;text-align:center}
+.chiprow{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
 .chip{
   appearance:none;cursor:pointer;
   background:transparent;border:1px solid var(--line-2);color:var(--muted);
@@ -285,20 +254,17 @@ footer{
   /* Mobile-first reorder: answer + pills + talk are the core; the capability
      panel drops to the bottom (secondary on a phone). Whole page scrolls. */
   html,body{height:auto;overflow:visible}          /* let the page scroll on mobile (base body is overflow:hidden for desktop) */
-  /* stage/panel/footer are real direct children now, so plain flex order works (no display:contents, which glitched on iOS) */
   .app{padding:16px 16px 24px;height:auto;min-height:100dvh;display:flex;flex-direction:column;column-gap:0}
   header{order:0}
   .stage{order:1;display:block;overflow:visible;min-height:auto}
   footer{order:2;margin-top:18px;padding-top:16px;gap:12px;flex-wrap:wrap}
-  .panel{order:3;margin-top:22px;border-left:0;border-top:1px solid var(--line);padding-left:0;padding-top:16px}
   /* fixed-height answer area so changing the text (greeting -> short reply) never
      shifts the button/pills below it. Snug to the greeting; long answers scroll
      inside (the voice carries them, the screen shows the start). */
   .convo{height:clamp(140px,23vh,170px);overflow-y:auto;padding-top:0}
-  .wave{height:58px}                     /* small signal, not a big empty band */
+  .wave{height:64px}                     /* small signal, not a big empty band */
   .now{font-size:clamp(18px,5vw,22px);line-height:1.34;max-width:100%;width:100%;margin-top:12px}
   .history{display:none}
-  .cap{padding-left:14px}
   .ptt{order:1;flex:1 1 auto;justify-content:center}
   .hint{display:none}
   .chips{order:2;margin-left:0;width:100%;flex-wrap:wrap}   /* ALL pills visible, no hidden sideways scroll */
@@ -344,11 +310,6 @@ footer{
         </div>
       </div>
     </section>
-
-    <aside class="panel">
-      <h2 id="panelTitle">What Adam builds</h2>
-      <div class="caps" id="caps"></div>
-    </aside>
 
   <footer>
     <button class="ptt" id="ptt" aria-label="Hold to speak">
