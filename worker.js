@@ -130,6 +130,10 @@ export default {
     if (capped) return json({ reply: capped === "day" ? CAP_DAY : CAP_IP, capped: true, highlight: "none" }, 200);
     const messages = Array.isArray(body.messages) ? body.messages : [];
 
+    // Streaming path: emit Claude's words as they generate so the page can speak
+    // sentence-by-sentence (first audio in ~1.5s instead of waiting for the whole reply).
+    if (body.stream === true) return askStream(env, messages);
+
     const reqBody = JSON.stringify({
       model: MODEL,
       max_tokens: 85,   // hard cap: 2 tight spoken sentences, shorter = faster to generate + speak
@@ -194,6 +198,68 @@ function pickHighlight(text) {
 function json(obj, status) {
   return new Response(JSON.stringify(obj), {
     status, headers: { "Content-Type": "application/json", ...CORS },
+  });
+}
+
+// ── Streaming answer: proxy Claude's SSE and re-emit ONLY the spoken text, as a plain
+// text stream. The page reads it, and the moment a full sentence lands it voices that
+// sentence while Claude keeps writing. On any upstream failure we return a JSON sentinel
+// (no reply) so the page falls back to its instant scripted answer, never dead air. ──
+async function askStream(env, messages) {
+  let upstream;
+  try {
+    upstream = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 85,
+        thinking: { type: "disabled" },
+        system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
+        messages,
+        stream: true,
+      }),
+    });
+  } catch (e) { console.error("askStream fetch", e); return json({ reply: null, error: true }, 200); }
+  if (!upstream.ok || !upstream.body) {
+    console.error("askStream upstream", upstream && upstream.status);
+    return json({ reply: null, error: true }, 200);
+  }
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+  const enc = new TextEncoder();
+  (async () => {
+    const dec = new TextDecoder();
+    const reader = upstream.body.getReader();
+    let buf = "";
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let nl;
+        while ((nl = buf.indexOf("\n")) >= 0) {
+          const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
+          if (!line.startsWith("data:")) continue;
+          const p = line.slice(5).trim();
+          if (!p || p === "[DONE]") continue;
+          try {
+            const ev = JSON.parse(p);
+            if (ev.type === "content_block_delta" && ev.delta && typeof ev.delta.text === "string" && ev.delta.text) {
+              await writer.write(enc.encode(ev.delta.text));
+            }
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+    finally { try { await writer.close(); } catch (_) {} }
+  })();
+  return new Response(readable, {
+    headers: { ...CORS, "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-cache" },
   });
 }
 
