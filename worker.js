@@ -73,43 +73,32 @@ const CORS = {
 };
 
 // ── Abuse guard (KV-backed; the mic path is the only thing that costs money) ──
-// Pills are free recordings. One mic question = 2 calls here (Claude answer + ElevenLabs
-// voice). We count the ANSWER call per person per minute and per day; the voice call only
-// checks (so a question isn't double-counted). Over a limit we skip the paid calls: the
-// chat call returns a canned note telling the visitor what to do, and the voice call
-// returns 429 so the page speaks it in the free browser voice, so a blocked attempt costs
-// nothing. Fail-open everywhere: any KV hiccup must never break Mia.
-const IP_PER_MIN = 10;      // ~10 mic questions per minute per person
-const DAILY_MAX  = 500;     // whole-site ceiling per day (the bill safety net)
-const CAP_IP  = "You are asking a little faster than I can keep up with. Give it about a minute and ask me again, or message Adam on WhatsApp anytime and he will get right back to you.";
+// Pills are free recordings. One mic question = 2 calls here (Claude answer + voice).
+// We count the ANSWER call against a whole-site DAILY total; the voice call only checks
+// (so a question isn't double-counted). Over the cap we skip the paid calls: the chat
+// call returns a canned note, and the voice call returns 429 so the page speaks it in the
+// free browser voice, so a blocked attempt costs nothing. Fail-open everywhere: any KV
+// hiccup must never break Mia.
+const DAILY_MAX = 1000;     // whole-site ceiling per day (the bill safety net; no per-person limit)
 const CAP_DAY = "I have had a very busy day answering questions, so I am taking a short rest. Do come back tomorrow, or message Adam on WhatsApp anytime and he will get right back to you.";
 
-function limitKeys(ip) {
-  const day = new Date().toISOString().slice(0, 10);
-  const min = Math.floor(Date.now() / 60000);
-  return { ipKey: `ip:${ip}:${min}`, dayKey: `day:${day}` };
-}
-// read-only: is this person (or the whole site) currently over a limit?
-async function overNow(env, ip) {
+function dayKey() { return `day:${new Date().toISOString().slice(0, 10)}`; }
+// read-only: is the whole site currently over the daily cap?
+async function overNow(env) {
   if (!env.MIA_KV) return null;
   try {
-    const { ipKey, dayKey } = limitKeys(ip);
-    if (parseInt(await env.MIA_KV.get(ipKey) || "0", 10) >= IP_PER_MIN) return "ip";
-    if (parseInt(await env.MIA_KV.get(dayKey) || "0", 10) >= DAILY_MAX) return "day";
+    if (parseInt(await env.MIA_KV.get(dayKey()) || "0", 10) >= DAILY_MAX) return "day";
     return null;
   } catch (e) { console.error("overNow", e); return null; }
 }
-// check + count one answer call
-async function chargeAnswer(env, ip) {
+// check + count one answer call against the daily total
+async function chargeAnswer(env) {
   if (!env.MIA_KV) return null;
   try {
-    const { ipKey, dayKey } = limitKeys(ip);
-    const ipN = parseInt(await env.MIA_KV.get(ipKey) || "0", 10);
-    if (ipN >= IP_PER_MIN) return "ip";
-    const dayN = parseInt(await env.MIA_KV.get(dayKey) || "0", 10);
-    if (dayN >= DAILY_MAX) return "day";
-    await env.MIA_KV.put(ipKey, String(ipN + 1), { expirationTtl: 120 });
-    await env.MIA_KV.put(dayKey, String(dayN + 1), { expirationTtl: 172800 });
+    const k = dayKey();
+    const n = parseInt(await env.MIA_KV.get(k) || "0", 10);
+    if (n >= DAILY_MAX) return "day";
+    await env.MIA_KV.put(k, String(n + 1), { expirationTtl: 172800 });
     return null;
   } catch (e) { console.error("chargeAnswer", e); return null; }
 }
@@ -121,13 +110,12 @@ export default {
 
     let body;
     try { body = await request.json(); } catch { return json({ error: "bad json" }, 400); }
-    const ip = request.headers.get("CF-Connecting-IP") || "?";
-    if (typeof body.text === "string") {                  // ElevenLabs (Christine) voice
-      if (await overNow(env, ip)) return new Response("rate_limited", { status: 429, headers: CORS });  // page -> free browser voice
+    if (typeof body.text === "string") {                  // voice synthesis call
+      if (await overNow(env)) return new Response("rate_limited", { status: 429, headers: CORS });  // page -> free browser voice
       return tts(body.text);
     }
-    const capped = await chargeAnswer(env, ip);           // the answer call is the one we count
-    if (capped) return json({ reply: capped === "day" ? CAP_DAY : CAP_IP, capped: true, highlight: "none" }, 200);
+    const capped = await chargeAnswer(env);               // the answer call is the one we count
+    if (capped) return json({ reply: CAP_DAY, capped: true, highlight: "none" }, 200);
     const messages = Array.isArray(body.messages) ? body.messages : [];
 
     // Streaming path: emit Claude's words as they generate so the page can speak
