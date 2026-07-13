@@ -37,13 +37,6 @@
       "cap": "tools"
     },
     {
-      "id": "sys3",
-      "g": "built",
-      "q": "What does all this cost to run?",
-      "a": "Almost nothing. Most of it lives on one machine, the video tool runs inside your browser, and a chat like this one costs cents. The clever part isn't spending more, it's spending next to nothing and still being right.",
-      "cap": "research"
-    },
-    {
       "id": "sys4",
       "g": "built",
       "q": "Prove you're not scripted",

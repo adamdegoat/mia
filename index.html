@@ -415,7 +415,6 @@ const CHIPS = [
   {q:"What have you built?", audio:"audio/sys0.mp3", g:"built", cap:"research", a:`Short version, a whole property platform that runs itself with nobody touching it. A valuation model, market reports that fact-check their own numbers, a news engine that writes and translates itself every morning, and me. Property's just where you can watch it work, the same engineering fits any business.`},
   {q:"How does it run on its own?", audio:"audio/sys1.mp3", g:"built", cap:"research", a:`Most of it runs on a schedule with nobody at the wheel. The news publishes itself each morning, the monthly report audits its own numbers before it ships, and every engine has a fallback, so it never fails quietly.`},
   {q:"How accurate is your valuation?", audio:"audio/sys2.mp3", g:"built", cap:"tools", a:`Within about four percent of the real sale price, tested across roughly nine thousand five hundred actual transactions. It pulls the real government caveats, weighs the most similar recent sales, and adjusts for floor and lease. And it shows its working, so you can stand behind the number.`},
-  {q:"What does all this cost to run?", audio:"audio/sys3.mp3", g:"built", cap:"research", a:`Almost nothing. Most of it lives on one machine, the video tool runs inside your browser, and a chat like this one costs cents. The clever part isn't spending more, it's spending next to nothing and still being right.`},
   {q:"Prove you're not scripted", audio:"audio/sys4.mp3", g:"built", cap:"conversational", a:`You tapped a button and I handed you a tidy line, so fair enough, that proves nothing. Hold the mic and ask me anything, completely off script, and watch me handle it live. That's the real proof.`},
   {q:"Could I have my own Mia?", audio:"audio/biz0.mp3", g:"build", cap:"conversational", a:`That's the whole idea. Your own version of me, in your brand, trained on your business, answering your clients around the clock so you never miss a late enquiry. Tap the WhatsApp button and Adam will set it up.`},
   {q:"What could you build my agency?", audio:"audio/biz1.mp3", g:"build", cap:"custom", a:`Whatever eats your team's time. A system that sorts and chases your own leads, a research engine that briefs you every morning, tools your clients use on your site, or a voice like me on the phones. Property's the showcase, this works for any business.`},
@@ -949,15 +948,25 @@ function karaokeItem(myTok,item){
 // play one prepared sentence; resolves when it ends (or Stop releases it)
 function playItem(myTok,item){
   return new Promise((resolve)=>{
-    const done=()=>{ if(playResolve===resolve) playResolve=null; resolve(); };
+    let fin=false, iv=null;
+    const done=()=>{ if(fin) return; fin=true; if(iv){ clearInterval(iv); iv=null; } if(playResolve===resolve) playResolve=null; resolve(); };
     if(myTok!==speakToken){ resolve(); return; }
     playResolve=resolve;
     mode='speaking'; setState('Speaking',true); energy=0.6;
+    // Edge TTS pads ~0.6-0.7s of silence onto the END of every sentence clip. Waiting for
+    // it to finish naturally creates a long dead-air gap between sentences. Instead, watch
+    // playback and advance the moment the speech ends (well inside that silent tail), so the
+    // next sentence starts right away and the reply flows like real speech.
+    const watchTail=(a)=>{ if(iv) clearInterval(iv); iv=setInterval(()=>{
+      if(myTok!==speakToken){ done(); return; }
+      const d=a.duration;
+      if(d && isFinite(d) && a.currentTime>0.05 && a.currentTime >= d - 0.5) done();
+    }, 45); };
     const plain=()=>{
       if(!ttsAudio){ ttsAudio=new Audio(); ttsAudio.playsInline=true; ttsAudio.preload='auto'; }
       ttsAudio.src=item.url; ttsAudio.volume=1; curAudio=ttsAudio; ttsOn=true;
       ttsAudio.onended=done; ttsAudio.onerror=done;
-      karaokeItem(myTok,item); ttsAudio.play().catch(()=>done());
+      karaokeItem(myTok,item); ttsAudio.play().then(()=>watchTail(ttsAudio)).catch(()=>done());
     };
     if(audioCtx && audioCtx.state==='running'){
       try{
@@ -973,7 +982,7 @@ function playItem(myTok,item){
         liveGain.gain.value=item.gain||6; curAudio=liveAudio; ttsOn=true;
         liveAudio.onended=done; liveAudio.onerror=done;
         karaokeItem(myTok,item);
-        liveAudio.play().then(()=>{}).catch(()=>plain());   // boosted; if the element is busy, drop to plain
+        liveAudio.play().then(()=>watchTail(liveAudio)).catch(()=>plain());   // boosted; if the element is busy, drop to plain
         return;
       }catch(e){}
     }
