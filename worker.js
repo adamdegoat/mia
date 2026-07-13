@@ -82,35 +82,41 @@ export default {
     if (typeof body.text === "string") return tts(body.text, env);   // ElevenLabs (Christine) voice
     const messages = Array.isArray(body.messages) ? body.messages : [];
 
-    try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "x-api-key": env.ANTHROPIC_API_KEY,
-          "anthropic-version": "2023-06-01",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          max_tokens: 200,
-          thinking: { type: "disabled" },   // short spoken replies: faster, cheaper, no stray thinking blocks
-          // Knowledge Pack is stable, so cache it: re-billed at ~10% on later turns.
-          system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
-          messages,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        console.error("anthropic error", data);
-        return json({ reply: "My brain hit an error just now. Give me another go.", highlight: "none" }, 200);
+    const reqBody = JSON.stringify({
+      model: MODEL,
+      max_tokens: 200,
+      thinking: { type: "disabled" },   // short spoken replies: faster, cheaper, no stray thinking blocks
+      // Knowledge Pack is stable, so cache it: re-billed at ~10% on later turns.
+      system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
+      messages,
+    });
+    // Retry transient failures so a momentary API blip never reaches a client.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const res = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "x-api-key": env.ANTHROPIC_API_KEY,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+          },
+          body: reqBody,
+        });
+        const data = await res.json();
+        if (res.ok) {
+          const tb = (data.content || []).find(b => b.type === "text");   // grab the text, skip any thinking block
+          const raw = ((tb && tb.text) || "").trim();
+          if (raw) return json(toReply(raw), 200);
+        } else {
+          console.error("anthropic error", res.status, data);
+          if (res.status < 500 && res.status !== 429) break;   // 4xx (except rate limit) won't fix on retry
+        }
+      } catch (e) {
+        console.error("attempt", attempt, e);
       }
-      const tb = (data.content || []).find(b => b.type === "text");   // grab the text, skip any thinking block
-      const raw = ((tb && tb.text) || "").trim();
-      return json(toReply(raw), 200);
-    } catch (e) {
-      console.error(e);
-      return json({ reply: "I lost my connection for a second. Try me again.", highlight: "none" }, 200);
+      await new Promise(r => setTimeout(r, 400 * (attempt + 1)));   // brief backoff, then retry
     }
+    return json({ reply: "Give me one more go, that dropped for a second.", highlight: "none" }, 200);
   },
 };
 
