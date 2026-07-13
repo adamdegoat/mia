@@ -1,0 +1,124 @@
+{
+  "greeting": "Hi, I'm Mia. I'm not a slide, I'm a system Adam built. Ask me anything out loud, or tap a question below to get us going.",
+  "groups": [
+    {
+      "g": "built",
+      "label": "What he's built"
+    },
+    {
+      "g": "build",
+      "label": "What he'd build you"
+    },
+    {
+      "g": "test",
+      "label": "Test her live"
+    }
+  ],
+  "pills": [
+    {
+      "id": "sys0",
+      "g": "built",
+      "q": "What have you built?",
+      "a": "Short version, a whole property platform that runs itself with nobody touching it. A valuation model, market reports that fact-check their own numbers, a news engine that writes and translates itself every morning, and me. Property's just where you can watch it work, the same engineering fits any business.",
+      "cap": "research"
+    },
+    {
+      "id": "sys1",
+      "g": "built",
+      "q": "How does it run on its own?",
+      "a": "Most of it runs on a schedule with nobody at the wheel. The news publishes itself each morning, the monthly report audits its own numbers before it ships, and every engine has a fallback, so it never fails quietly.",
+      "cap": "research"
+    },
+    {
+      "id": "sys2",
+      "g": "built",
+      "q": "How accurate is your valuation?",
+      "a": "Within about four percent of the real sale price, tested across roughly nine thousand five hundred actual transactions. It pulls the real government caveats, weighs the most similar recent sales, and adjusts for floor and lease. And it shows its working, so you can stand behind the number.",
+      "cap": "tools"
+    },
+    {
+      "id": "sys3",
+      "g": "built",
+      "q": "What does all this cost to run?",
+      "a": "Almost nothing. Most of it lives on one machine, the video tool runs inside your browser, and a chat like this one costs cents. The clever part isn't spending more, it's spending next to nothing and still being right.",
+      "cap": "research"
+    },
+    {
+      "id": "sys4",
+      "g": "built",
+      "q": "Prove you're not scripted",
+      "a": "You tapped a button and I handed you a tidy line, so fair enough, that proves nothing. Hold the mic and ask me anything, completely off script, and watch me handle it live. That's the real proof.",
+      "cap": "conversational"
+    },
+    {
+      "id": "biz0",
+      "g": "build",
+      "q": "Could I have my own Mia?",
+      "a": "That's the whole idea. Your own version of me, in your brand, trained on your business, answering your clients around the clock so you never miss a late enquiry. Tap the WhatsApp button and Adam will set it up.",
+      "cap": "conversational"
+    },
+    {
+      "id": "biz1",
+      "g": "build",
+      "q": "What could you build my agency?",
+      "a": "Whatever eats your team's time. A system that sorts and chases your own leads, a research engine that briefs you every morning, tools your clients use on your site, or a voice like me on the phones. Property's the showcase, this works for any business.",
+      "cap": "custom"
+    },
+    {
+      "id": "biz2",
+      "g": "build",
+      "q": "What would you automate for me?",
+      "a": "Tell me what you still do by hand, and I'll tell you. Usually it's the repeats, chasing leads, writing the same updates, pulling the same numbers. If it's a routine, it can run itself, and you keep the part that actually needs you.",
+      "cap": "research"
+    },
+    {
+      "id": "biz3",
+      "g": "build",
+      "q": "Can you build outside property?",
+      "a": "Yes. Property's just where Adam put the showcase, so people can watch the engineering run live. The same parts, autonomous engines, smart tools, a voice like me, drop into any industry. Point him at the boring, repetitive thing in your business.",
+      "cap": "custom"
+    },
+    {
+      "id": "biz4",
+      "g": "build",
+      "q": "Can you build me a website with real tools?",
+      "a": "Not just a pretty page, a page that actually does something. A valuation checker, calculators, an assistant like me built right in, so you're genuinely useful to your clients, not just findable. This demo is one of them.",
+      "cap": "web"
+    },
+    {
+      "id": "live0",
+      "g": "test",
+      "q": "What's my place worth?",
+      "a": "I can get you close. I pull the recent sales of homes like yours, same size, same area, same age, and weigh the nearest ones the way a valuer would. Give me your block and unit type, and I'll draft you a range off real caveats, not a guess.",
+      "cap": "tools"
+    },
+    {
+      "id": "live1",
+      "g": "test",
+      "q": "What's the ABSD on a second home?",
+      "a": "For a Singapore citizen buying a second home, it's twenty percent of the price, on top of the usual stamp duty. But if you're selling your first place, a married couple can claim that back, as long as you sell within six months. Get the timing wrong and it's real money.",
+      "cap": "tools"
+    },
+    {
+      "id": "live2",
+      "g": "test",
+      "q": "Is now a good time to buy?",
+      "a": "Anyone who gives you a flat yes or no is guessing. What I can do is pull the recent prices where you're looking, show you which way they're moving, and flag if a place sits above or below its neighbours. Then you decide on numbers, not a hunch.",
+      "cap": "tools"
+    },
+    {
+      "id": "live3",
+      "g": "test",
+      "q": "What's the SSD if I sell early?",
+      "a": "On a private home, if you sell within the first year it's sixteen percent of the price, and it steps down each year until it's gone after four. An HDB flat has a five year minimum before you can sell at all. Tell me when you bought, and I'll place you exactly.",
+      "cap": "tools"
+    },
+    {
+      "id": "live4",
+      "g": "test",
+      "q": "How do you actually value a place?",
+      "a": "Same way a good valuer thinks, just faster. I take the recent sales of homes like yours, weigh the most similar ones hardest, and adjust for floor height and how much lease is left. No black box, you see every comparable I used.",
+      "cap": "tools"
+    }
+  ]
+}

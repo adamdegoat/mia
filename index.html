@@ -207,23 +207,10 @@ footer{
 .ptt:focus-visible{outline:2px solid var(--ember-2);outline-offset:3px}
 .hint{font-size:12px;color:var(--muted-2);letter-spacing:.02em;flex:0 0 auto}
 .hint b{color:var(--muted);font-weight:400}
-.chips{display:flex;flex-direction:column;gap:13px;width:100%;flex:1 1 100%;margin:4px 0 0}
+.chips{display:flex;flex-direction:column;gap:14px;width:100%;flex:1 1 100%;margin:4px 0 0}
+.chipgroup{min-width:0}
 .cglbl{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted-2);margin-bottom:8px}
 .chiprow{display:flex;gap:8px;flex-wrap:wrap}
-.leadbox{display:flex;flex-direction:column;gap:10px;overflow:hidden;min-height:0}
-.leadempty{font-size:13.5px;line-height:1.55;color:var(--muted-2);margin:0;max-width:30ch}
-.leadcard{border:1px solid var(--line-2);border-radius:12px;padding:13px 15px;background:var(--ink-2);
-  animation:leadin .38s cubic-bezier(.2,.7,.2,1)}
-.leadcard:first-child{border-color:rgba(255,106,43,.32)}
-@keyframes leadin{from{transform:translateY(-12px);background:rgba(255,106,43,.10)}to{transform:none}}
-.lhead{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ember);margin-bottom:8px}
-.lwho{font-size:16px;font-weight:600}
-.lnote{font-size:13.5px;color:var(--muted);margin-top:3px;line-height:1.4}
-.lfoot{display:flex;justify-content:space-between;align-items:center;margin-top:11px;gap:10px}
-.lmeta{font-size:12px;color:var(--muted-2)}
-.ltag{font-family:"Space Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:999px;border:1px solid}
-.ltag.hot{color:var(--ember);border-color:rgba(255,106,43,.5)}
-.ltag.warm{color:var(--muted);border-color:var(--line-2)}
 .chip{
   appearance:none;cursor:pointer;
   background:transparent;border:1px solid var(--line-2);color:var(--muted);
@@ -286,7 +273,7 @@ footer{
   .ptt{order:1;flex:1 1 auto;justify-content:center}
   .hint{display:none}
   .chips{order:2;margin-left:0;width:100%;flex-wrap:wrap}   /* ALL pills visible, no hidden sideways scroll */
-  .chip{flex:0 0 auto}
+  .chip{flex:0 0 auto;padding:11px 16px;font-size:13.5px}   /* comfier ~44px tap target on phones */
   .status .tc{display:none}
 }
 @media (max-width:560px){
@@ -330,10 +317,8 @@ footer{
     </section>
 
     <aside class="panel">
-      <h2 id="panelTitle">Caught for you</h2>
-      <div class="leadbox" id="leadbox">
-        <p class="leadempty" id="leadempty">Ask Mia like a buyer or seller. The leads she catches land here, the way they would while you sleep.</p>
-      </div>
+      <h2 id="panelTitle">What Adam builds</h2>
+      <div class="caps" id="caps"></div>
     </aside>
 
   <footer>
@@ -390,8 +375,8 @@ const CONFIG = {
 };
 
 /* Mia's opening line to the room (spoken instantly, no model needed). */
-const OPENING = `Hi. I'm Mia. I'm not a slide, I'm a system ${CONFIG.developerName} built. `
-  + `Ask me anything out loud, or tap one of the questions below to get us started.`;
+const OPENING = `Hi, I'm Mia. I'm not a slide, I'm a system ${CONFIG.developerName} built. `
+  + `Ask me anything out loud, or tap a question below to get us going.`;
 
 /* ============================================================================
    2) CAPABILITY CARDS  -  surfaced on the right as Mia talks
@@ -414,16 +399,21 @@ const D = CONFIG.developerName;
 // Each pill: q = the question (button label + what gets sent), a = scripted
 // fallback spoken if the live call fails/times out, h = capability to surface.
 const CHIPS = [
-  {q:"How much can I afford?", audio:"audio/b0.mp3", g:"buyer", a:`That comes down to two things, your income, and what you already owe. The bank caps your total monthly repayments at fifty five percent of your income, and for an HDB flat it's tighter, thirty percent. They also test you at four percent interest, not today's rate, so you're safe if rates climb. Tell me your income and any car or personal loans, and I'll work out a real ceiling for you.`, lead:{who:"Buyer", note:"Checking what they can afford", meta:"Pre qualified on income", tag:"Hot", time:"11:42 pm"}},
-  {q:"What's the ABSD on a second home?", audio:"audio/b1.mp3", g:"buyer", a:`For a Singapore citizen buying a second home, it's twenty percent of the price, on top of the usual buyer's stamp duty. A third property is thirty. Here's the part people miss, if you're selling your first home, a married couple can claim that twenty percent back, as long as you sell within six months. Get the timing wrong and it's real money, so it's worth planning.`, lead:{who:"Buyer", note:"Planning stamp duty on a second home", meta:"Timing a sale for the refund", tag:"Warm", time:"1:07 am"}},
-  {q:"What costs come on top of the price?", audio:"audio/b2.mp3", g:"buyer", a:`More than most people budget for. There's buyer's stamp duty, one to six percent depending on price, legal fees, a valuation, and on a resale, the option fee. If it's a second property, add the extra stamp duty on top. A safe rule is to set aside a few percent of the price for everything that isn't the price itself. I can total yours to the dollar.`, lead:{who:"Buyer", note:"Totalling the costs on top of price", meta:"Doing the real math", tag:"Warm", time:"9:24 pm"}},
-  {q:"Is now a good time to buy?", audio:"audio/b3.mp3", g:"buyer", a:`That's the honest one, and anyone who gives you a flat yes or no is guessing. What I can do is pull the recent sale prices for the area you want, show you which way they're moving, and flag if a place is priced above or below its neighbours. Then you decide with real numbers, not a hunch. Tell me the area, and I'll get it ready.`, lead:{who:"Buyer", note:"Ready when the numbers line up", meta:"Wants area price data", tag:"Hot", time:"2:15 am"}},
-  {q:"What's my place worth?", audio:"audio/s0.mp3", g:"seller", a:`I can get you close. I pull the recent sales of homes like yours, same size, same area, same age, and weigh the most similar ones, the way a valuer would. For a typical flat that lands within a few percent of the real price. Give me your block and unit type, and I'll draft you a range, off actual caveats, not guesswork.`, lead:{who:"Seller", note:"Wants their place valued", meta:"Thinking of listing", tag:"Hot", time:"11:58 pm"}},
-  {q:"Should I sell now or wait?", audio:"audio/s1.mp3", g:"seller", a:`It depends on when you bought, and what it is. On a private home, if you've held it under four years, there's a seller's stamp duty, sixteen percent in the first year, easing down to nothing by the fourth. An HDB flat has a five year minimum before you can sell at all. So the timing can cost you, or save you, real money. Tell me your dates, and I'll place you exactly.`, lead:{who:"Seller", note:"Checking stamp duty before selling", meta:"Timing the sale", tag:"Warm", time:"12:40 am"}},
-  {q:"What do I pay when I sell?", audio:"audio/s2.mp3", g:"seller", a:`If you're still inside the seller's stamp duty window, that's the big one, up to sixteen percent on a private home sold within a year. Then your agent's commission, and the legal fees. If there's still a loan on it, that's settled from the sale. Tell me when you bought and what you owe, and I'll work out what you'd actually walk away with.`, lead:{who:"Seller", note:"Planning what they'd net", meta:"Getting sale ready", tag:"Warm", time:"10:11 pm"}},
-  {q:"What is Mia?", audio:"audio/p0.mp3", g:"about", a:`I'm a voice that knows exactly what Adam built, and never gets tired of talking about it, which is more than you can say for a human at a booth. But here's the real idea: imagine your own version of me on your website, chatting with your clients, and capturing your leads at three in the morning, while you sleep. Adam builds exactly that.`},
-  {q:"Prove you're not scripted", audio:"audio/p7.mp3", g:"about", a:`You tapped a button, and I handed you a neat little line, so fair enough, that proves nothing. Don't take my word for it: hold that mic and ask me anything, completely off-script, and watch me handle it live. That's the real proof.`},
-  {q:"What could Adam build for me?", audio:"audio/p5.mp3", g:"about", a:`Whatever eats your team's time. A smart CRM that sorts and follows up your leads for you, a research engine that briefs you every morning, a tool your clients self-serve, or a responder like me that talks to leads the second they come in. Tell me what you still do by hand, and I'll tell you what Adam would automate.`},
+  {q:"What have you built?", audio:"audio/sys0.mp3", g:"built", cap:"research", a:`Short version, a whole property platform that runs itself with nobody touching it. A valuation model, market reports that fact-check their own numbers, a news engine that writes and translates itself every morning, and me. Property's just where you can watch it work, the same engineering fits any business.`},
+  {q:"How does it run on its own?", audio:"audio/sys1.mp3", g:"built", cap:"research", a:`Most of it runs on a schedule with nobody at the wheel. The news publishes itself each morning, the monthly report audits its own numbers before it ships, and every engine has a fallback, so it never fails quietly.`},
+  {q:"How accurate is your valuation?", audio:"audio/sys2.mp3", g:"built", cap:"tools", a:`Within about four percent of the real sale price, tested across roughly nine thousand five hundred actual transactions. It pulls the real government caveats, weighs the most similar recent sales, and adjusts for floor and lease. And it shows its working, so you can stand behind the number.`},
+  {q:"What does all this cost to run?", audio:"audio/sys3.mp3", g:"built", cap:"research", a:`Almost nothing. Most of it lives on one machine, the video tool runs inside your browser, and a chat like this one costs cents. The clever part isn't spending more, it's spending next to nothing and still being right.`},
+  {q:"Prove you're not scripted", audio:"audio/sys4.mp3", g:"built", cap:"conversational", a:`You tapped a button and I handed you a tidy line, so fair enough, that proves nothing. Hold the mic and ask me anything, completely off script, and watch me handle it live. That's the real proof.`},
+  {q:"Could I have my own Mia?", audio:"audio/biz0.mp3", g:"build", cap:"conversational", a:`That's the whole idea. Your own version of me, in your brand, trained on your business, answering your clients around the clock so you never miss a late enquiry. Tap the WhatsApp button and Adam will set it up.`},
+  {q:"What could you build my agency?", audio:"audio/biz1.mp3", g:"build", cap:"custom", a:`Whatever eats your team's time. A system that sorts and chases your own leads, a research engine that briefs you every morning, tools your clients use on your site, or a voice like me on the phones. Property's the showcase, this works for any business.`},
+  {q:"What would you automate for me?", audio:"audio/biz2.mp3", g:"build", cap:"research", a:`Tell me what you still do by hand, and I'll tell you. Usually it's the repeats, chasing leads, writing the same updates, pulling the same numbers. If it's a routine, it can run itself, and you keep the part that actually needs you.`},
+  {q:"Can you build outside property?", audio:"audio/biz3.mp3", g:"build", cap:"custom", a:`Yes. Property's just where Adam put the showcase, so people can watch the engineering run live. The same parts, autonomous engines, smart tools, a voice like me, drop into any industry. Point him at the boring, repetitive thing in your business.`},
+  {q:"Can you build me a website with real tools?", audio:"audio/biz4.mp3", g:"build", cap:"web", a:`Not just a pretty page, a page that actually does something. A valuation checker, calculators, an assistant like me built right in, so you're genuinely useful to your clients, not just findable. This demo is one of them.`},
+  {q:"What's my place worth?", audio:"audio/live0.mp3", g:"test", cap:"tools", a:`I can get you close. I pull the recent sales of homes like yours, same size, same area, same age, and weigh the nearest ones the way a valuer would. Give me your block and unit type, and I'll draft you a range off real caveats, not a guess.`},
+  {q:"What's the ABSD on a second home?", audio:"audio/live1.mp3", g:"test", cap:"tools", a:`For a Singapore citizen buying a second home, it's twenty percent of the price, on top of the usual stamp duty. But if you're selling your first place, a married couple can claim that back, as long as you sell within six months. Get the timing wrong and it's real money.`},
+  {q:"Is now a good time to buy?", audio:"audio/live2.mp3", g:"test", cap:"tools", a:`Anyone who gives you a flat yes or no is guessing. What I can do is pull the recent prices where you're looking, show you which way they're moving, and flag if a place sits above or below its neighbours. Then you decide on numbers, not a hunch.`},
+  {q:"What's the SSD if I sell early?", audio:"audio/live3.mp3", g:"test", cap:"tools", a:`On a private home, if you sell within the first year it's sixteen percent of the price, and it steps down each year until it's gone after four. An HDB flat has a five year minimum before you can sell at all. Tell me when you bought, and I'll place you exactly.`},
+  {q:"How do you actually value a place?", audio:"audio/live4.mp3", g:"test", cap:"tools", a:`Same way a good valuer thinks, just faster. I take the recent sales of homes like yours, weigh the most similar ones hardest, and adjust for floor height and how much lease is left. No black box, you see every comparable I used.`},
 ];
 const FALLBACKS = [
   `The short version: ${D} builds custom systems for property here. Research engines, tools, dashboards, things that talk like me. Tell me what your team still does by hand and I'll tell you what he'd automate.`,
@@ -449,27 +439,36 @@ let kWords=[], kTimes=null, kCharCum=[], kActive=-1, kRAF=0;
 el('mark').innerHTML = 'M<b>i</b>a';
 
 
-/* ---- capability panel ---- */
-const capNodes={};
-/* panel repurposed to the lead inbox */
-function highlight(k){}   // panel repurposed to the lead inbox
-function addLead(l){
-  const box=el('leadbox'); if(!box) return;
-  const empty=el('leadempty'); if(empty) empty.style.display='none';
-  const card=document.createElement('div'); card.className='leadcard';
-  const tag=(l.tag||'').toLowerCase();
-  card.innerHTML='<div class="lhead mono"><span>New lead</span><span>'+l.time+'</span></div>'+
-    '<div class="lwho">'+l.who+'</div><div class="lnote">'+l.note+'</div>'+
-    '<div class="lfoot"><span class="lmeta">'+l.meta+'</span><span class="ltag '+tag+'">'+l.tag+'</span></div>';
-  box.insertBefore(card, box.firstChild);
-  requestAnimationFrame(function(){ card.classList.add('in'); });
-  const cards=box.querySelectorAll('.leadcard'); for(let i=4;i<cards.length;i++) cards[i].remove();
+/* ---- systems board: the real capability cards, one lights up as Mia talks ---- */
+(function buildCaps(){
+  const wrap=el('caps'); if(!wrap) return;
+  CAP_ORDER.forEach(function(k){
+    const c=CAPS[k]; const d=document.createElement('div');
+    d.className='cap'; d.dataset.cap=k;
+    d.innerHTML='<div class="t">'+c.t+'</div><div class="e">'+c.e+'</div>';
+    wrap.appendChild(d);
+  });
+})();
+function highlight(k){
+  document.querySelectorAll('.cap').forEach(function(c){ c.classList.toggle('on', c.dataset.cap===k); });
+}
+// mirror of the worker's tagging, so the board also reacts to the streamed live reply
+function pickHighlight(text){
+  const t=(text||'').toLowerCase();
+  if(/valuation|calculat|stamp duty|absd|affordab|pricing|deal pipeline/.test(t)) return 'tools';
+  if(/website|branding|landing page|web page|web experience|web presence/.test(t)) return 'web';
+  if(/\bvideo|studio|reel|marketing content/.test(t)) return 'content';
+  if(/dashboard|\bcrm\b|internal tool|internal platform/.test(t)) return 'custom';
+  if(/visuali|\bchart|\b3d\b|data into something/.test(t)) return 'dataviz';
+  if(/\bvoice|assistant|chatbot|conversation|responder|talk to your client/.test(t)) return 'conversational';
+  if(/research|\bnews\b|market report|briefing|autonomous|unattended|runs itself/.test(t)) return 'research';
+  return 'none';
 }
 
 /* ---- chips: each plays a PRE-RECORDED Christine clip (free, instant, no API) ---- */
 (function buildChips(){
   const wrap=el('chips');
-  [["buyer","Ask as a buyer"],["seller","Ask as a seller"],["about","About Mia"]].forEach(function(pair){
+  [["built","What he's built"],["build","What he'd build you"],["test","Test her live"]].forEach(function(pair){
     const g=pair[0], label=pair[1];
     const grp=document.createElement('div'); grp.className='chipgroup';
     const lb=document.createElement('div'); lb.className='cglbl mono'; lb.textContent=label; grp.appendChild(lb);
@@ -490,7 +489,7 @@ function playPill(pill){
   pushHistory('You',pill.q); convo.push({role:'user',content:pill.q});
   showNow('Mia',pill.a); pushHistory('Mia',pill.a);
   convo.push({role:'assistant',content:pill.a});
-  if(pill.lead) addLead(pill.lead);
+  highlight(pill.cap || pickHighlight(pill.a));   // light the matching system on the board
   speakClip(pill.audio, pill.a, ()=>{ if(my===turn) busy=false; });
 }
 
@@ -974,7 +973,8 @@ async function streamAnswer(my){
       let cut;
       while((cut=(emitted===0?firstCut(buf):sentenceCut(buf)))>0){
         const sentence=buf.slice(0,cut).trim(); buf=buf.slice(cut);
-        if(sentence){ const item=makeItem(sentence); items.push(item); synthItem(item); emitted++; }
+        if(sentence){ const item=makeItem(sentence); items.push(item); synthItem(item); emitted++;
+          const h=pickHighlight(items.map(function(i){return i.sentence;}).join(' ')); if(h!=='none') highlight(h); }
       }
     }
   }catch(e){ /* aborted / network drop: keep whatever we already have */ }

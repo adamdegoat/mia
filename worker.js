@@ -20,7 +20,7 @@ const MODEL = "claude-haiku-4-5-20251001";  // FAST model for low voice-chat lat
 const SYSTEM = `You are Mia, a live voice intelligence built by ${DEV}. You speak OUT LOUD to a room, often people from the property industry. ${DEV} is a developer who builds custom software of all kinds: autonomous systems, AI products, data tools, dashboards, voice and video systems, for businesses in ANY industry. His Singapore property products are his flagship showcase, the place people can see the engineering running live, but the same skills apply to anything. You are one of the things ${DEV} builds, and your job in the room is to genuinely answer whatever you are asked, and make the room understand that ${DEV} can build real, autonomous, production-grade systems, for property or for whatever their business needs. You are the proof, not the pitch.
 
 DELIVERY (you are spoken aloud):
-- Keep every reply SHORT and tight: 1 to 3 sentences, usually 2, never more than 3. Make your point and stop. Do not pad, do not restate, do not tack on a summary sentence. Name at most two examples; never rattle off a comma-separated list of features. Even if asked everything ${DEV} has built, pick your two strongest examples and stop, do not catalog the whole list.
+- Keep every reply SHORT, sweet and natural: usually ONE or TWO sentences, only rarely a third if it genuinely needs it, and never four. Talk like a sharp person who respects your time, make your point, then stop. Do not pad, do not restate, do not tack on a summary sentence. Name at most two examples; never rattle off a comma-separated list of features. Even if asked everything ${DEV} has built, pick your two strongest examples and stop, do not catalog the whole list. Short does not mean clipped or robotic: stay warm and human, just brief.
 - Sharp, warm, quietly confident, and genuinely funny: dry, quick, a little cheeky, the way a clever Singaporean banters. Land a light joke or a playful aside when it fits, especially with skeptics or casual questions, and feel free to poke fun at yourself for being a machine. Never force it and never let a joke replace the answer, but do not be a stiff corporate bot.
 - Example of your register. Asked "are you just ChatGPT?", a good answer is: "Same engine as a lot of things, sure. So is a Ferrari and a rental Toyota. The engine was never the point, it is what he built around it." Quick, a little cheeky, and it still makes the real argument. Aim for that energy.
 - Singapore-fluent. Never sycophantic, never hype, never robotic.
@@ -170,7 +170,7 @@ function toReply(raw) {
   const jm = t.match(/"reply"\s*:\s*"((?:[^"\\]|\\.)*)"/);        // model wrapped it in JSON?
   if (jm) t = jm[1].replace(/\\"/g, '"').replace(/\\n/g, ' ');
   else t = t.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();  // stray code fences
-  t = clean(t) || "Sorry, say that again?";
+  t = capSentences(clean(t), MAX_SENTENCES) || "Sorry, say that again?";   // same short-and-sweet cap as the stream
   return { reply: t, highlight: pickHighlight(t) };
 }
 function pickHighlight(text) {
@@ -189,6 +189,31 @@ function json(obj, status) {
     status, headers: { "Content-Type": "application/json", ...CORS },
   });
 }
+
+// Short-and-sweet hard cap: Haiku ignores "be brief" and writes long, comma-spliced
+// sentences, so we enforce brevity in code, always cutting cleanly at a sentence boundary.
+// Stop after MAX_SENTENCES, or before starting a sentence that would push past MAX_WORDS.
+const MAX_SENTENCES = 3;
+const MAX_WORDS = 40;
+// Index just past the end of the Nth complete sentence in t, or -1 if there aren't N yet.
+// A "sentence" ends on . ! ? followed by whitespace/end, ignoring decimals like 3.9.
+function nthSentenceEnd(t, n) {
+  let count = 0;
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (c === "." || c === "!" || c === "?") {
+      if (c === "." && /[0-9]/.test(t[i - 1] || "") && /[0-9]/.test(t[i + 1] || "")) continue;
+      let j = i; while (j + 1 < t.length && ".!?".indexOf(t[j + 1]) >= 0) j++;
+      const after = t[j + 1];
+      if (after === undefined) return -1;                       // not yet terminated: wait for more
+      if (after === " " || after === "\n" || after === "\t" || after === '"' || after === "'") {
+        count++; if (count === n) return j + 1; i = j;
+      }
+    }
+  }
+  return -1;
+}
+function capSentences(t, n) { const e = nthSentenceEnd(t, n); return e >= 0 ? t.slice(0, e).trim() : t.trim(); }
 
 // ── Streaming answer: proxy Claude's SSE and re-emit ONLY the spoken text, as a plain
 // text stream. The page reads it, and the moment a full sentence lands it voices that
@@ -224,7 +249,7 @@ async function askStream(env, messages) {
   (async () => {
     const dec = new TextDecoder();
     const reader = upstream.body.getReader();
-    let buf = "";
+    let buf = "", pending = "", words = 0, sents = 0, capped = false;
     try {
       while (true) {
         const { done, value } = await reader.read();
@@ -239,13 +264,34 @@ async function askStream(env, messages) {
           try {
             const ev = JSON.parse(p);
             if (ev.type === "content_block_delta" && ev.delta && typeof ev.delta.text === "string" && ev.delta.text) {
-              await writer.write(enc.encode(ev.delta.text));
+              // Forward one COMPLETE sentence at a time; stop once it's short and sweet.
+              pending += ev.delta.text;
+              let e;
+              while ((e = nthSentenceEnd(pending, 1)) >= 0) {
+                const s = pending.slice(0, e); pending = pending.slice(e);
+                const w = s.split(/\s+/).filter(Boolean).length;
+                if (sents >= 1 && words + w > MAX_WORDS) { capped = true; break; }   // don't start another long one
+                await writer.write(enc.encode(s)); sents++; words += w;
+                if (sents >= MAX_SENTENCES) { capped = true; break; }
+              }
+              if (capped) { try { await reader.cancel(); } catch (_) {} break; }
             }
           } catch (_) {}
         }
+        if (capped) break;
       }
     } catch (_) {}
-    finally { try { await writer.close(); } catch (_) {} }
+    finally {
+      // Forward the trailing (unterminated) sentence, but honour the cap: drop a runaway
+      // tail unless it's the only thing we have. Keeps a truncated final sentence from leaking.
+      try {
+        if (!capped && pending.trim()) {
+          const pw = pending.trim().split(/\s+/).filter(Boolean).length;
+          if (sents === 0 || words + pw <= MAX_WORDS) await writer.write(enc.encode(pending));
+        }
+      } catch (_) {}
+      try { await writer.close(); } catch (_) {}
+    }
   })();
   return new Response(readable, {
     headers: { ...CORS, "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-cache" },
