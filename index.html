@@ -973,7 +973,9 @@ function karaokeItem(myTok,item){
   };
   kRAF=requestAnimationFrame(tick);
 }
-// play one prepared sentence; resolves when it ends (or Stop releases it)
+// play one prepared sentence; resolves when it ends (or Stop releases it).
+// A watchdog guarantees resolution even if a clip stalls or autoplay is blocked, so a
+// single bad clip can NEVER freeze the turn (which would leave the mic stuck busy).
 function playItem(myTok,item){
   return new Promise((resolve)=>{
     let fin=false, iv=null;
@@ -981,20 +983,24 @@ function playItem(myTok,item){
     if(myTok!==speakToken){ resolve(); return; }
     playResolve=resolve;
     mode='speaking'; setState('Speaking',true); energy=0.6;
-    // Edge TTS pads ~0.6-0.7s of silence onto the END of every sentence clip. Waiting for
-    // it to finish naturally creates a long dead-air gap between sentences. Instead, watch
-    // playback and advance the moment the speech ends (well inside that silent tail), so the
-    // next sentence starts right away and the reply flows like real speech.
-    const watchTail=(a)=>{ if(iv) clearInterval(iv); iv=setInterval(()=>{
+    // Watchdog: guarantees this clip resolves so one bad clip can't freeze the turn.
+    // Fires if the clip never starts (blocked autoplay), or starts then FREEZES mid-play
+    // (currentTime stops advancing ~1.5s), or runs absurdly long. Never fires during normal
+    // playback: currentTime keeps advancing through the trailing silence to onended.
+    const guard=(a)=>{ if(iv) clearInterval(iv); let ticks=0, moved=false, lastCt=0, stall=0; iv=setInterval(()=>{
       if(myTok!==speakToken){ done(); return; }
-      const d=a.duration;
-      if(d && isFinite(d) && a.currentTime>0.05 && a.currentTime >= d - 0.5) done();
-    }, 45); };
+      ticks++; const ct=a.currentTime||0;
+      if(ct>0.15) moved=true;
+      if(ct>lastCt+0.02){ lastCt=ct; stall=0; } else { stall++; }
+      if(!moved && ticks>=27) done();             // ~1.6s, never started -> skip
+      else if(moved && stall>=26) done();          // started then frozen ~1.5s -> skip
+      else if(ticks>=550) done();                  // ~33s hard cap
+    }, 60); };
     const plain=()=>{
       if(!ttsAudio){ ttsAudio=new Audio(); ttsAudio.playsInline=true; ttsAudio.preload='auto'; }
       ttsAudio.src=item.url; ttsAudio.volume=1; curAudio=ttsAudio; ttsOn=true;
       ttsAudio.onended=done; ttsAudio.onerror=done;
-      karaokeItem(myTok,item); ttsAudio.play().then(()=>watchTail(ttsAudio)).catch(()=>done());
+      karaokeItem(myTok,item); guard(ttsAudio); ttsAudio.play().catch(()=>done());
     };
     if(!IS_IOS && audioCtx && audioCtx.state==='running'){
       try{
@@ -1009,8 +1015,8 @@ function playItem(myTok,item){
         }
         liveGain.gain.value=item.gain||6; curAudio=liveAudio; ttsOn=true;
         liveAudio.onended=done; liveAudio.onerror=done;
-        karaokeItem(myTok,item);
-        liveAudio.play().then(()=>watchTail(liveAudio)).catch(()=>plain());   // boosted; if the element is busy, drop to plain
+        karaokeItem(myTok,item); guard(liveAudio);
+        liveAudio.play().catch(()=>plain());   // boosted; if the element is busy, drop to plain
         return;
       }catch(e){}
     }
@@ -1076,6 +1082,10 @@ async function streamAnswer(my){
    ============================================================================ */
 async function ask(text){
   if(busy) return; const my=++turn; busy=true;         // a pill can supersede this turn
+  // Last-resort safety: never let a wedged turn leave the mic permanently busy. If this turn
+  // is somehow still busy after a long ceiling (far longer than any real reply), free it so
+  // the next hold-to-talk always works.
+  clearTimeout(ask._guard); ask._guard=setTimeout(()=>{ if(turn===my && busy){ stopSpeaking(); busy=false; mode='idle'; setState('Ready',false); } }, 22000);
   pushHistory('You',text); showNow('You',text);
   convo.push({role:'user',content:text});
 
