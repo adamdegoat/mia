@@ -115,7 +115,7 @@ export default {
       return tts(body.text);
     }
     const capped = await chargeAnswer(env);               // the answer call is the one we count
-    if (capped) return json({ reply: CAP_DAY, capped: true, highlight: "none" }, 200);
+    if (capped) return json({ reply: CAP_DAY, capped: true }, 200);
     const messages = Array.isArray(body.messages) ? body.messages : [];
 
     // Streaming path: emit Claude's words as they generate so the page can speak
@@ -156,13 +156,12 @@ export default {
       }
       await new Promise(r => setTimeout(r, 400 * (attempt + 1)));   // brief backoff, then retry
     }
-    return json({ reply: "Give me one more go, that dropped for a second.", highlight: "none" }, 200);
+    return json({ reply: "Give me one more go, that dropped for a second." }, 200);
   },
 };
 
-// Mia now replies in plain text (robust: a long answer degrades gracefully
-// instead of breaking JSON). We salvage a reply if the model still wraps it,
-// strip dashes, and work out the panel highlight from the words themselves.
+// Mia replies in plain text (robust: a long answer degrades gracefully instead of breaking
+// JSON). We salvage a reply if the model still wraps it, and strip dashes.
 function clean(s) { return String(s || "").trim().replace(/\s*[—–]\s*/g, ", "); }
 function toReply(raw) {
   let t = raw;
@@ -170,18 +169,7 @@ function toReply(raw) {
   if (jm) t = jm[1].replace(/\\"/g, '"').replace(/\\n/g, ' ');
   else t = t.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();  // stray code fences
   t = capReply(clean(t)) || "Sorry, say that again?";   // short and sweet: <=3 sentences, <=40 words
-  return { reply: t, highlight: pickHighlight(t) };
-}
-function pickHighlight(text) {
-  const t = text.toLowerCase();
-  if (/valuation|calculat|stamp duty|absd|affordab|pricing|deal pipeline/.test(t)) return "tools";
-  if (/website|branding|landing page|web page|web experience|web presence/.test(t)) return "web";
-  if (/\bvideo|studio|reel|marketing content/.test(t)) return "content";
-  if (/dashboard|\bcrm\b|internal tool|internal platform/.test(t)) return "custom";
-  if (/visuali|\bchart|\b3d\b|data into something/.test(t)) return "dataviz";
-  if (/\bvoice|assistant|chatbot|conversation|responder|talk to your client/.test(t)) return "conversational";
-  if (/research|\bnews\b|market report|briefing|autonomous|unattended|runs itself/.test(t)) return "research";
-  return "none";
+  return { reply: t };
 }
 function json(obj, status) {
   return new Response(JSON.stringify(obj), {

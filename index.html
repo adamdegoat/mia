@@ -412,13 +412,6 @@ const CONFIG = {
 
   // Mia's voice. true = worker TTS (Luna). false = browser voice. Falls back automatically.
   useElevenLabs: true,
-
-  // Loudness boost. Mobile plays Web Audio at unity gain, which is soft.
-  // Loudness. Live ElevenLabs is quieter so it gets more boost; the pre-recorded
-  // clips are already normalized loud, so they get less. A peak limiter stops clipping.
-  clipVolume: 1.3,      // pre-recorded greeting/pill boost (clips are already normalized loud)
-  targetRms: 0.20,      // LIVE audio is auto-normalized to this loudness so it matches the louder clips
-  voiceVolume: 6,       // fallback live gain if the loudness measurement ever fails
 };
 
 /* Mia's opening line to the room (spoken instantly, no model needed). */
@@ -426,25 +419,10 @@ const OPENING = `Hi, I'm Mia. I'm the front desk that never sleeps, never forget
   + `Ask me anything out loud, or tap a question to start.`;
 
 /* ============================================================================
-   2) CAPABILITY CARDS  -  surfaced on the right as Mia talks
-   ============================================================================ */
-const CAPS = {
-  research:{t:"Autonomous research engines", e:"Daily digests, monthly analysis, monitors that run on a schedule with nobody touching them."},
-  tools:{t:"Tools and calculators", e:"Valuation, affordability, pricing, deal pipelines. The things a team wishes it had in-house."},
-  dataviz:{t:"Data visualization", e:"Raw data turned into something anyone can actually understand. 3D included."},
-  content:{t:"Content and video engines", e:"Marketing content and videos that generate themselves on a schedule."},
-  web:{t:"Websites and client tools", e:"Branding pages with real smarts built in, so you add value to your own clients, not just look good. This demo is one."},
-  conversational:{t:"Conversational and voice systems", e:"Assistants and responders that talk to your clients. Like me."},
-  custom:{t:"Custom software and dashboards", e:"CRMs, dashboards and internal platforms built around how you actually work."},
-};
-const CAP_ORDER = ["research","tools","dataviz","content","web","conversational","custom"];
-
-/* ============================================================================
-   3) SCRIPTED ANSWERS  -  used when workerUrl is empty (offline demo mode)
+   2) PILLS  -  each plays a pre-recorded Luna clip; `a` is also the scripted
+   fallback spoken if a live call fails/times out. `cap` is vestigial (unused).
    ============================================================================ */
 const D = CONFIG.developerName;
-// Each pill: q = the question (button label + what gets sent), a = scripted
-// fallback spoken if the live call fails/times out, h = capability to surface.
 const CHIPS = [
   {q:"What have you built?", audio:"audio/sys0.mp3", g:"built", cap:"research", a:`Short version, a whole property platform that runs itself with nobody touching it. A valuation model, market reports that fact-check their own numbers, a news engine that writes and translates itself every morning, and me. Property's just where you can watch it work, the same engineering fits any business.`},
   {q:"How does it run on its own?", audio:"audio/sys1.mp3", g:"built", cap:"research", a:`Most of it runs on a schedule with nobody at the wheel. The news publishes itself each morning, the monthly report audits its own numbers before it ships, and every engine has a fallback, so it never fails quietly.`},
@@ -469,7 +447,6 @@ const FALLBACKS = [
   `Fair one. I'm a small taste of it, ${D} builds the bigger machines behind the scenes, the ones that research, calculate, and follow up without anyone lifting a finger.`,
 ];
 let _fb=0; const nextFallback=()=>FALLBACKS[(_fb++)%FALLBACKS.length];
-const FB_HL=["custom","tools","research","conversational"];
 
 /* ============================================================================
    4) ENGINE  -  browser speech in, Claude (or script) out, browser voice back
@@ -486,33 +463,7 @@ let kWords=[], kTimes=null, kCharCum=[], kActive=-1, kRAF=0;
 el('mark').innerHTML = 'M<b>i</b>a';
 
 
-/* ---- systems board: the real capability cards, one lights up as Mia talks ---- */
-(function buildCaps(){
-  const wrap=el('caps'); if(!wrap) return;
-  CAP_ORDER.forEach(function(k){
-    const c=CAPS[k]; const d=document.createElement('div');
-    d.className='cap'; d.dataset.cap=k;
-    d.innerHTML='<div class="t">'+c.t+'</div><div class="e">'+c.e+'</div>';
-    wrap.appendChild(d);
-  });
-})();
-function highlight(k){
-  document.querySelectorAll('.cap').forEach(function(c){ c.classList.toggle('on', c.dataset.cap===k); });
-}
-// mirror of the worker's tagging, so the board also reacts to the streamed live reply
-function pickHighlight(text){
-  const t=(text||'').toLowerCase();
-  if(/valuation|calculat|stamp duty|absd|affordab|pricing|deal pipeline/.test(t)) return 'tools';
-  if(/website|branding|landing page|web page|web experience|web presence/.test(t)) return 'web';
-  if(/\bvideo|studio|reel|marketing content/.test(t)) return 'content';
-  if(/dashboard|\bcrm\b|internal tool|internal platform/.test(t)) return 'custom';
-  if(/visuali|\bchart|\b3d\b|data into something/.test(t)) return 'dataviz';
-  if(/\bvoice|assistant|chatbot|conversation|responder|talk to your client/.test(t)) return 'conversational';
-  if(/research|\bnews\b|market report|briefing|autonomous|unattended|runs itself/.test(t)) return 'research';
-  return 'none';
-}
-
-/* ---- chips: each plays a PRE-RECORDED Christine clip (free, instant, no API) ---- */
+/* ---- chips: each plays a pre-recorded Luna clip (free, instant, no API) ---- */
 (function buildChips(){
   const wrap=el('chips');
   [["built","What he's built"],["build","What he'd build you"],["test","Test her live"]].forEach(function(pair){
@@ -536,7 +487,6 @@ function playPill(pill){
   pushHistory('You',pill.q); convo.push({role:'user',content:pill.q});
   showNow('Mia',pill.a); pushHistory('Mia',pill.a);
   convo.push({role:'assistant',content:pill.a});
-  highlight(pill.cap || pickHighlight(pill.a));   // light the matching system on the board
   speakClip(pill.audio, pill.a, ()=>{ if(my===turn) busy=false; });
   if(pill.lead) setTimeout(()=>{ if(my===turn) openLead(); }, 900);   // she guides them to the form as she talks
 }
@@ -810,50 +760,47 @@ function pickVoice(){
 }
 speechSynthesis.onvoiceschanged=pickVoice; pickVoice();
 
-let curUtter=null, ttsAudio=null, ttsSource=null, ttsAnalyser=null, ttsData=null, ttsOn=false, speakToken=0, ttsGain=null;
+let curUtter=null, ttsAudio=null, ttsOn=false, speakToken=0;
 let curAudio=null;   // the audio element currently playing (greeting / pill / live), so Stop can pause it
 
-// LIVE voice: generate Christine speech from arbitrary text (free-form spoken questions).
+// LIVE voice: fetch Luna speech for free-form text from the worker, play it, fall back to
+// the browser voice if that fails.
 function speak(text,done){
   stopSpeaking();
   const my=++speakToken;
   mode='speaking'; setState('Speaking',true); energy=0.6;
   if(CONFIG.useElevenLabs && CONFIG.workerUrl){
-    elevenSpeak(text,my,done).catch(e=>{ if(my===speakToken){ console.warn('ElevenLabs failed, using browser voice',e); browserSpeak(text,done); } });
+    liveSpeak(text,my,done).catch(e=>{ if(my===speakToken){ console.warn('live voice failed, using browser voice',e); browserSpeak(text,done); } });
   }else{
     browserSpeak(text,done);
   }
 }
-async function elevenSpeak(text,my,done){
+async function liveSpeak(text,my,done){
   const r=await fetch(CONFIG.workerUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
   if(!r.ok) throw new Error('tts '+r.status);
   if(!/audio/i.test(r.headers.get('content-type')||'')) throw new Error('not audio');
   const buf=await r.arrayBuffer();
   if(my!==speakToken) return;
-  // ONE clip, played through the exact same plain path as the pills (proven, robust). No Web
-  // Audio graph, no boost, no measurement - that machinery is what kept wedging.
-  await voicePlay(URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'})), my, done, 1);
+  // ONE clip through the exact same plain path as the pills (proven, robust).
+  await voicePlay(URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'})), my, done);
 }
 
-// PRE-RECORDED voice: play a stored Christine clip (greeting + pills). Free, instant, consistent.
+// PRE-RECORDED voice: play a stored Luna clip (greeting + pills). Free, instant, consistent.
 function speakClip(src, fallbackText, done){
   stopSpeaking();
   const my=++speakToken;
   mode='speaking'; setState('Speaking',true); energy=0.6;
-  // load exact per-word timings alongside the clip (e.g. audio/p2.json) for follow-along
+  // load exact per-word timings alongside the clip (e.g. audio/sys0.json) for follow-along
   fetch(src.replace('.mp3','.json')).then(r=>r.ok?r.json():null)
     .then(d=>{ if(my===speakToken && d && d.t) kTimes=d.t; }).catch(()=>{});
-  voicePlay(src, my, done, CONFIG.clipVolume||1.3).catch(e=>{ if(my===speakToken){ console.warn('clip failed, using live voice',e); speak(fallbackText||'', done); } });
+  voicePlay(src, my, done).catch(e=>{ if(my===speakToken){ console.warn('clip failed, using live voice',e); speak(fallbackText||'', done); } });
 }
 
-// low-level player: routes any audio URL through gain -> peak limiter -> out (+ voiceprint tap).
-async function voicePlay(src, my, done, gain){
+// Low-level player: a plain <audio> element (NOT routed through the AudioContext). On iOS,
+// audio piped through Web Audio is treated as call audio (earpiece + soft); a bare <audio>
+// element plays out the loudspeaker. The voiceprint animates synthetically while speaking.
+async function voicePlay(src, my, done){
   if(my!==speakToken) return;                        // superseded (barge-in / newer reply)
-  // PLAIN audio element, NOT routed through the AudioContext. On iOS, audio piped
-  // through Web Audio gets treated as call audio (routes to the earpiece + goes soft);
-  // a bare <audio> element plays out the loudspeaker at full volume. The clips are
-  // already loudness-matched, so they don't need the old gain/limiter graph. The
-  // voiceprint animates synthetically while speaking (see draw()).
   if(!ttsAudio){ ttsAudio=new Audio(); ttsAudio.playsInline=true; ttsAudio.preload='auto'; }
   ttsAudio.src=src; ttsAudio.volume=1; curAudio=ttsAudio;
   const finish=()=>{ if(my===speakToken){ ttsOn=false; mode='idle'; setState('Ready',false); done&&done(); } if(src&&src.indexOf('blob:')===0){ try{URL.revokeObjectURL(src);}catch(e){} } };
@@ -861,7 +808,6 @@ async function voicePlay(src, my, done, gain){
   ttsOn=true; startKaraoke(my);
   await ttsAudio.play();
 }
-function pumpTts(){ if(ttsOn && ttsAnalyser){ ttsAnalyser.getByteFrequencyData(ttsData); requestAnimationFrame(pumpTts); } }
 
 function browserSpeak(text,done){
   mode='speaking'; setState('Speaking',true); energy=0.6;
@@ -905,9 +851,7 @@ async function ask(text){
   // Safe scripted answer for this question — used as the offline-demo reply AND
   // as the instant fallback if a live call fails or times out. Never dead air.
   const hit=CHIPS.find(c=>c.q.toLowerCase()===text.toLowerCase());
-  let reply, hl;
-  if(hit){ reply=hit.a; hl=hit.h; }
-  else { const i=_fb; reply=nextFallback(); hl=FB_HL[i%FB_HL.length]; }
+  let reply = hit ? hit.a : nextFallback();
 
   // LIVE: one Claude call for the whole reply. If it fails or times out, we keep the scripted
   // answer above, so there's never dead air. (Simple + robust; the voice is one clip below.)
@@ -919,7 +863,7 @@ async function ask(text){
       clearTimeout(to);
       const j=await r.json();
       const bad=!j||!j.reply||/say that again|lost my connection|brain hit an error/i.test(j.reply);
-      if(!bad){ reply=j.reply; if(!hit && j.highlight && CAPS[j.highlight]) hl=j.highlight; }
+      if(!bad) reply=j.reply;
     }catch(e){ console.warn('live answer failed, using scripted fallback',e); }
   }else{
     await wait(650+Math.random()*500);               // offline demo: feel of thinking
@@ -927,7 +871,6 @@ async function ask(text){
 
   if(my!==turn) return;                                // a pill took over while we were thinking
   convo.push({role:'assistant',content:reply});
-  if(hl&&CAPS[hl]) highlight(hl);
   showNow('Mia',reply); pushHistory('Mia',reply);
   speak(reply,()=>{ if(my===turn) busy=false; });
 }
@@ -946,7 +889,7 @@ el('begin').addEventListener('click',()=>{
   // speak the opening line directly (instant, reliable, no model call).
   // NOTE: do NOT push it into `convo` — the API rejects a history that starts
   // with an assistant turn, which broke the first pill/question.
-  showNow('Mia',OPENING); highlight('conversational');
+  showNow('Mia',OPENING);
   speakClip('audio/greeting.mp3', OPENING);   // plays within the tap gesture -> sounds on mobile
   // On desktop/Android, create + resume the AudioContext INSIDE this tap so it's RUNNING for
   // the boosted live path. Skipped on iOS on purpose: any AudioContext there routes audio to
