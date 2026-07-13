@@ -13,7 +13,7 @@
    ============================================================================ */
 
 const DEV = "Adam";
-const MODEL = "claude-sonnet-5";  // best balance: witty, tight, accurate. Its shorter
+const MODEL = "claude-haiku-4-5-20251001";  // FAST model for low voice-chat latency (~2s vs ~5s on Sonnet). Its shorter
                                   // replies keep cost low despite the higher token price.
                                   // Cheapest raw: "claude-haiku-4-5". Sharpest: "claude-opus-4-8".
 
@@ -132,7 +132,7 @@ export default {
 
     const reqBody = JSON.stringify({
       model: MODEL,
-      max_tokens: 200,
+      max_tokens: 110,   // hard cap: keeps replies to 2-3 spoken sentences AND cuts latency
       thinking: { type: "disabled" },   // short spoken replies: faster, cheaper, no stray thinking blocks
       // Knowledge Pack is stable, so cache it: re-billed at ~10% on later turns.
       system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
