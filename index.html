@@ -389,9 +389,13 @@ const CONFIG = {
   // Tune by ear if it sounds off: try "Mya", "Mee-ah", "Meeya".
   sayName: "Meeya",
 
-  // Mia's voice. true = ElevenLabs (Christine, via the Worker). false = browser voice.
-  // If ElevenLabs ever fails, she automatically falls back to the browser voice.
+  // Mia's voice. true = worker TTS (Luna). false = browser voice. Falls back automatically.
   useElevenLabs: true,
+
+  // Live replies: false = simple + robust (get the whole reply, make ONE clip, play it like a
+  // pill). true = stream sentence-by-sentence (faster first word, but far more moving parts).
+  // Kept simple on purpose after streaming proved fragile.
+  stream: false,
 
   // Loudness boost. Mobile plays Web Audio at unity gain, which is soft.
   // Loudness. Live ElevenLabs is quieter so it gets more boost; the pre-recorded
@@ -799,18 +803,9 @@ async function elevenSpeak(text,my,done){
   if(!/audio/i.test(r.headers.get('content-type')||'')) throw new Error('not audio');
   const buf=await r.arrayBuffer();
   if(my!==speakToken) return;
-  if(!IS_IOS && !audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
-  // Live audio is quieter than the normalized clips. On non-iOS, measure its loudness and
-  // set a matching gain so the boosted hold-to-talk is as loud as the pills.
-  let gain=CONFIG.voiceVolume||6;
-  try{
-    const ab=await audioCtx.decodeAudioData(buf.slice(0));
-    const d=ab.getChannelData(0); let sum=0,n=0;
-    for(let i=0;i<d.length;i+=32){ sum+=d[i]*d[i]; n++; }
-    const rms=Math.sqrt(sum/Math.max(1,n));
-    if(rms>0.00001){ gain=Math.min(16, Math.max(1.5, (CONFIG.targetRms||0.16)/rms)); }
-  }catch(e){}
-  await liveVoicePlay(URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'})), my, done, gain);  // boosted if ctx running, else plain fallback
+  // ONE clip, played through the exact same plain path as the pills (proven, robust). No Web
+  // Audio graph, no boost, no measurement - that machinery is what kept wedging.
+  await voicePlay(URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'})), my, done, 1);
 }
 
 // PRE-RECORDED voice: play a stored Christine clip (greeting + pills). Free, instant, consistent.
@@ -1086,7 +1081,7 @@ async function ask(text){
     }
   }else if(CONFIG.workerUrl){                         // streaming off: one-shot Claude call
     try{
-      const ctrl=new AbortController(), to=setTimeout(()=>ctrl.abort(),6000);
+      const ctrl=new AbortController(), to=setTimeout(()=>ctrl.abort(),10000);   // non-stream waits for the whole reply
       const r=await fetch(CONFIG.workerUrl,{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({messages:convo}),signal:ctrl.signal});
       clearTimeout(to);
