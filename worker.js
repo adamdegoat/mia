@@ -124,7 +124,7 @@ export default {
     const ip = request.headers.get("CF-Connecting-IP") || "?";
     if (typeof body.text === "string") {                  // ElevenLabs (Christine) voice
       if (await overNow(env, ip)) return new Response("rate_limited", { status: 429, headers: CORS });  // page -> free browser voice
-      return tts(body.text, env);
+      return tts(body.text);
     }
     const capped = await chargeAnswer(env, ip);           // the answer call is the one we count
     if (capped) return json({ reply: capped === "day" ? CAP_DAY : CAP_IP, capped: true, highlight: "none" }, 200);
@@ -197,26 +197,81 @@ function json(obj, status) {
   });
 }
 
-// ElevenLabs text-to-speech in Christine's voice (en-SG). Streams mp3 back.
-async function tts(text, env) {
-  const VOICE = "Y7xQSS5ZtS4xv4VJotWd";  // Christine
+// ── Free voice: Microsoft Edge TTS in Luna (en-SG), +8%, over WebSocket. Returns mp3. ──
+// If anything fails it returns 502, and the page falls back to the browser voice (never silent).
+const EDGE_VOICE = "en-SG-LunaNeural";
+const EDGE_RATE = "+8%";
+const EDGE_PITCH = "+8Hz";   // slightly brighter/friendlier (user-chosen)
+const EDGE_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
+const EDGE_GEC_VERSION = "1-143.0.3650.75";   // matches edge-tts; if Microsoft starts rejecting, bump the Chromium version.
+
+// Singapore town names TTS mangles -> phonetic respelling (audio only; the screen shows the real name).
+const LEXICON = [
+  ["Choa Chu Kang","Chwa Choo Kang"],["Toa Payoh","Toe-ah Pa-yoh"],["Pasir Ris","Pah-sir Riss"],
+  ["Ang Mo Kio","Ang Moh Kee-oh"],["Bukit Panjang","Boo-kit Pan-jang"],["Tampines","Tampa-nees"],
+  ["Yishun","Yee-shun"],["Bishan","Bee-shun"],["Punggol","Poong-goal"],["Bedok","Buh-dock"],
+  ["Hougang","Hao-gang"],["Sengkang","Seng-kang"],["Serangoon","Suh-rang-goon"],["Sembawang","Sem-bah-wong"],
+];
+function fixPron(t){ for (const [a,b] of LEXICON) t = t.replace(new RegExp("\\b"+a.replace(/ /g,"\\s+")+"\\b","gi"), b); return t; }
+function xmlEsc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/'/g,"&apos;").replace(/"/g,"&quot;"); }
+
+async function edgeToken(){
+  const WIN_EPOCH = 11644473600;
+  let secs = Math.floor(Date.now()/1000) + WIN_EPOCH;
+  secs -= secs % 300;                                    // round down to the nearest 5 minutes
+  const ticks = (BigInt(secs) * 10000000n).toString();   // Windows file time in 100ns intervals
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(ticks + EDGE_TOKEN));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,"0")).join("").toUpperCase();
+}
+
+async function tts(text) {
   try {
-    const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE}`, {
-      method: "POST",
-      headers: {
-        "xi-api-key": env.ELEVENLABS_API_KEY,
-        "content-type": "application/json",
-        "accept": "audio/mpeg",
-      },
-      body: JSON.stringify({
-        text,
-        model_id: "eleven_turbo_v2_5",
-        voice_settings: { stability: 0.40, similarity_boost: 0.8, style: 0.55, use_speaker_boost: true, speed: 1.12 },
-      }),
+    const spoken = fixPron(String(text || "").slice(0, 900));
+    if (!spoken.trim()) return new Response("empty", { status: 400, headers: CORS });
+    const gec = await edgeToken();
+    const connId = crypto.randomUUID().replace(/-/g, "");
+    const url = `https://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=${EDGE_TOKEN}&Sec-MS-GEC=${gec}&Sec-MS-GEC-Version=${EDGE_GEC_VERSION}&ConnectionId=${connId}`;
+    const resp = await fetch(url, { headers: {
+      "Upgrade": "websocket",
+      "Origin": "chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0",
+      "Pragma": "no-cache", "Cache-Control": "no-cache",
+      "Accept-Encoding": "gzip, deflate, br, zstd", "Accept-Language": "en-US,en;q=0.9",
+    } });
+    const ws = resp.webSocket;
+    if (!ws) return new Response("tts_error:" + resp.status, { status: 502, headers: CORS });
+    ws.accept();
+
+    const ts = new Date().toISOString();
+    ws.send(`X-Timestamp:${ts}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}`);
+    const ssml = `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'><voice name='${EDGE_VOICE}'><prosody pitch='${EDGE_PITCH}' rate='${EDGE_RATE}' volume='+0%'>${xmlEsc(spoken)}</prosody></voice></speak>`;
+    ws.send(`X-RequestId:${connId}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:${ts}\r\nPath:ssml\r\n\r\n${ssml}`);
+
+    const chunks = [];
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("timeout")), 20000);
+      ws.addEventListener("message", (ev) => {
+        const d = ev.data;
+        if (typeof d === "string") {
+          if (d.includes("Path:turn.end")) { clearTimeout(timer); resolve(); }
+        } else if (d instanceof ArrayBuffer) {
+          const bytes = new Uint8Array(d);
+          const headerLen = (bytes[0] << 8) | bytes[1];               // strip the "Path:audio" header
+          if (bytes.length > 2 + headerLen) chunks.push(bytes.slice(2 + headerLen));
+        }
+      });
+      ws.addEventListener("close", () => { clearTimeout(timer); resolve(); });
+      ws.addEventListener("error", () => { clearTimeout(timer); reject(new Error("ws")); });
     });
-    if (!r.ok) return new Response("tts_error", { status: 502, headers: CORS });
-    return new Response(r.body, { headers: { ...CORS, "Content-Type": "audio/mpeg" } });
+    try { ws.close(); } catch (e) {}
+
+    const total = chunks.reduce((n, c) => n + c.length, 0);
+    if (!total) return new Response("tts_error", { status: 502, headers: CORS });
+    const out = new Uint8Array(total); let o = 0;
+    for (const c of chunks) { out.set(c, o); o += c.length; }
+    return new Response(out, { headers: { ...CORS, "Content-Type": "audio/mpeg" } });
   } catch (e) {
+    console.error("edge tts", e && e.message);
     return new Response("tts_error", { status: 502, headers: CORS });
   }
 }
