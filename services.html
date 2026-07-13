@@ -118,6 +118,10 @@ section{border-top:1px solid var(--line)}
 .tier .price{margin:16px 0 4px;font-size:clamp(38px,4.6vw,54px);font-weight:700;letter-spacing:-.02em;line-height:1}
 .tier .price span{font-size:16px;font-weight:500;color:var(--muted-2);letter-spacing:0}
 .tier .price em{color:var(--ember);font-style:normal}
+.tier .soon{margin:18px 0 6px;display:inline-flex;align-items:center;gap:8px;font-family:"Space Mono",monospace;
+  font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ember);
+  border:1px solid rgba(255,106,43,.4);border-radius:999px;padding:9px 15px}
+.tier .soon::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--ember)}
 .tier .tdesc{margin:16px 0 20px;color:var(--muted);font-size:15px;line-height:1.6}
 .tier ul{list-style:none;margin:0;padding:18px 0 0;border-top:1px solid var(--line);display:grid;gap:11px}
 .tier li{display:flex;gap:11px;align-items:flex-start;font-size:14px;color:var(--text)}
@@ -231,13 +235,13 @@ footer{border-top:1px solid var(--line)}
   <section class="pad">
     <div class="shead">
       <span class="lbl mono"><span class="n">02</span> Mia, packaged</span>
-      <span class="note">The one thing with a fixed price. Managed end to end.</span>
+      <span class="note">Done for you, end to end. Pricing to be released.</span>
     </div>
     <p class="pintro">The voice you just met, made yours. I set it up, put it in your brand, keep it current, and support it, so it runs while you work. <b>Month to month.</b></p>
     <div class="tiers">
       <div class="tier">
         <div class="tname">Mia</div>
-        <div class="price"><em>$400</em> <span>/ month</span></div>
+        <div class="soon">Pricing to be released</div>
         <p class="tdesc">Your own branded voice front desk. Answers every visitor and captures every lead, day and night.</p>
         <ul>
           <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Trained on your business and your listings</li>
@@ -247,7 +251,7 @@ footer{border-top:1px solid var(--line)}
       </div>
       <div class="tier sig">
         <div class="tname">Mia Signature</div>
-        <div class="price"><em>$600</em> <span>/ month</span></div>
+        <div class="soon">Pricing to be released</div>
         <p class="tdesc">Everything in Mia, with a custom or cloned voice, so it sounds like you or your brand, not an off the shelf voice.</p>
         <ul>
           <li><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> A voice built or cloned to match you</li>
@@ -256,7 +260,7 @@ footer{border-top:1px solid var(--line)}
         </ul>
       </div>
     </div>
-    <p class="pfoot mono">Message on WhatsApp to start. No lock in.</p>
+    <p class="pfoot mono">Message on WhatsApp for early access.</p>
   </section>
 
   <!-- TRACK RECORD -->
