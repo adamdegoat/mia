@@ -564,7 +564,8 @@ function submitLead(){
   el('leaddonetitle').textContent='Caught, '+name.split(/\s+/)[0]+'.';
   el('leadform').hidden=true; el('leaddone').hidden=false;
   showNow('Mia',LEAD_CONFIRM); pushHistory('Mia',LEAD_CONFIRM);
-  speakClip('audio/leadconfirm.mp3', LEAD_CONFIRM);         // she confirms out loud, instant + free
+  turn++; busy=false;                                        // end the pill turn cleanly (submitting mid-intro must not leave the mic stuck busy)
+  speakClip('audio/leadconfirm.mp3', LEAD_CONFIRM, ()=>{ busy=false; });   // she confirms out loud, instant + free
 }
 el('leadsend').addEventListener('click', submitLead);
 el('leadskip').addEventListener('click', closeLead);
