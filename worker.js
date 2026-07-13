@@ -136,7 +136,8 @@ export default {
 
     const reqBody = JSON.stringify({
       model: MODEL,
-      max_tokens: 85,   // hard cap: 2 tight spoken sentences, shorter = faster to generate + speak
+      max_tokens: 130,   // enough to finish 2-3 short sentences without truncating mid-word
+                         // (streaming means length no longer delays first audio; the system prompt keeps it tight)
       thinking: { type: "disabled" },   // short spoken replies: faster, cheaper, no stray thinking blocks
       // Knowledge Pack is stable, so cache it: re-billed at ~10% on later turns.
       system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
@@ -217,7 +218,7 @@ async function askStream(env, messages) {
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 85,
+        max_tokens: 130,
         thinking: { type: "disabled" },
         system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
         messages,
