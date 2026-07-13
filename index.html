@@ -740,7 +740,7 @@ async function elevenSpeak(text,my,done){
     const rms=Math.sqrt(sum/Math.max(1,n));
     if(rms>0.00001){ gain=Math.min(16, Math.max(1.5, (CONFIG.targetRms||0.16)/rms)); }
   }catch(e){}
-  await liveVoicePlay(URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'})), my, done, gain);
+  await voicePlay(URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'})), my, done, gain);  // plain path (reliable); loudness from Edge volume, not Web Audio
 }
 
 // PRE-RECORDED voice: play a stored Christine clip (greeting + pills). Free, instant, consistent.

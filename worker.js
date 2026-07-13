@@ -202,7 +202,7 @@ function json(obj, status) {
 const EDGE_VOICE = "en-US-AvaNeural";   // warm US voice, used at her natural default (user preferred default over tuned Luna)
 const EDGE_RATE = "+0%";
 const EDGE_PITCH = "+0Hz";
-const EDGE_VOLUME = "+0%";   // natural level; the page boosts live to match the pills (gain + limiter), which needs headroom
+const EDGE_VOLUME = "+50%";  // Edge's max boost (~-17 LUFS); live plays on the plain audio path so it can't route through a suspended AudioContext
 const EDGE_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
 const EDGE_GEC_VERSION = "1-143.0.3650.75";   // matches edge-tts; if Microsoft starts rejecting, bump the Chromium version.
 
