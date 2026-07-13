@@ -129,6 +129,13 @@ header{
 }
 .stage,.panel,.convo{min-width:0}
 .now.dim{opacity:.18}
+#nowText .w{color:var(--muted-2);transition:color .18s ease,text-shadow .18s ease}
+#nowText .w.said{color:var(--text)}
+#nowText .w.on{color:var(--ember);text-shadow:0 0 14px rgba(255,106,43,.35)}
+.state.sp{cursor:pointer}
+.stopcue{display:none;margin-left:9px;padding-left:9px;border-left:1px solid rgba(255,255,255,.14);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.state.sp .stopcue{display:inline}
+.stage.speaking{cursor:pointer}
 .now .who{
   display:block;font-family:"Space Mono",monospace;
   font-size:12px;letter-spacing:.22em;text-transform:uppercase;
@@ -284,7 +291,7 @@ footer{
       </a>
       <div class="status">
         <div class="tc mono" id="tc">00:00</div>
-        <div class="state" id="state" data-live="0"><span class="dot"></span><span id="stateLabel">Ready</span></div>
+        <div class="state" id="state" data-live="0"><span class="dot"></span><span id="stateLabel">Ready</span><span class="stopcue">Tap to stop</span></div>
       </div>
     </div>
   </header>
@@ -408,9 +415,11 @@ const FB_HL=["custom","tools","research","conversational"];
    ============================================================================ */
 const el = id => document.getElementById(id);
 const stateEl=el('state'), stateLabel=el('stateLabel'), tcEl=el('tc');
-const nowEl=el('now'), nowText=el('nowText'), nowWho=el('nowWho'), histEl=el('history');
+const nowEl=el('now'), nowText=el('nowText'), nowWho=el('nowWho'), histEl=el('history'), stageEl=document.querySelector('.stage');
 let convo=[];               // [{role, content}] for the model
-let busy=false, started=false;
+let busy=false, started=false, turn=0;
+// karaoke (follow-along) state: word spans, per-word start times, char-fraction fallback
+let kWords=[], kTimes=null, kCharCum=[], kActive=-1, kRAF=0;
 
 /* ---- header wordmark + panel reflect the real name ---- */
 el('mark').innerHTML = 'M<b>i</b>a';
@@ -442,17 +451,21 @@ function highlight(k){
 
 // A pill: show its scripted answer and play its pre-recorded clip. No Claude, no ElevenLabs.
 function playPill(pill){
-  if(busy||!started) return; busy=true;
-  document.querySelectorAll('.chip').forEach(x=>x.disabled=true);
+  if(!started) return;
+  const my=++turn; busy=true;             // any pill interrupts whatever is talking (speakClip cuts it)
   pushHistory('You',pill.q); convo.push({role:'user',content:pill.q});
   showNow('Mia',pill.a); pushHistory('Mia',pill.a);
   convo.push({role:'assistant',content:pill.a});
   if(pill.h && CAPS[pill.h]) highlight(pill.h);
-  speakClip(pill.audio, pill.a, ()=>{ busy=false; document.querySelectorAll('.chip').forEach(x=>x.disabled=false); });
+  speakClip(pill.audio, pill.a, ()=>{ if(my===turn) busy=false; });
 }
 
 /* ---- status + timecode ---- */
-function setState(label,live){ stateLabel.textContent=label; stateEl.dataset.live=live?'1':'0'; }
+function setState(label,live){
+  stateLabel.textContent=label; stateEl.dataset.live=live?'1':'0';
+  const sp=(label==='Speaking'); stateEl.classList.toggle('sp',sp);
+  if(stageEl) stageEl.classList.toggle('speaking',sp);
+}
 let t0=null;
 setInterval(()=>{
   if(!t0) return;
@@ -463,9 +476,59 @@ setInterval(()=>{
 /* ---- transcript lines ---- */
 function showNow(who,text){
   nowWho.textContent=who; nowWho.className='who'+(who!=='Mia'?' you':'');
-  nowText.textContent=text; nowEl.classList.remove('dim');
+  nowEl.classList.remove('dim');
+  if(who==='Mia'){ renderWords(text); }               // Mia: word spans for follow-along
+  else { nowText.textContent=text; kWords=[]; kTimes=null; kActive=-1; }
   const c=el('convo'); if(c) requestAnimationFrame(()=>{ c.scrollTop=nowEl.offsetTop; });
 }
+
+/* ---- follow-along highlight (karaoke): current word lit in ember, auto-scrolls ---- */
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function renderWords(text){
+  const words=text.split(/\s+/).filter(Boolean);
+  nowText.innerHTML=words.map(w=>'<span class="w">'+esc(w)+'</span>').join(' ');
+  kWords=Array.prototype.slice.call(nowText.querySelectorAll('.w'));
+  // char-proportional cumulative fractions — the fallback timing for LIVE answers
+  let total=0; const lens=words.map(w=>{ const L=w.length+1; total+=L; return L; });
+  let acc=0; kCharCum=lens.map(L=>{ const f=acc/(total||1); acc+=L; return f; });
+  kActive=-1; kTimes=null;
+}
+function setActiveWord(i){
+  if(i===kActive) return; kActive=i;
+  for(let j=0;j<kWords.length;j++){ const w=kWords[j]; w.classList.toggle('said',j<i); w.classList.toggle('on',j===i); }
+  if(kWords[i]) centerWord(kWords[i]);
+}
+function centerWord(w){
+  const c=el('convo'); if(!c) return;
+  const cr=c.getBoundingClientRect(), wr=w.getBoundingClientRect();
+  const rel=(wr.top-cr.top)+wr.height/2;                 // active word's centre within the box
+  if(rel<c.clientHeight*0.33 || rel>c.clientHeight*0.62) // only scroll when it drifts out of the middle band
+    c.scrollTo({top:c.scrollTop+rel-c.clientHeight/2, behavior:'smooth'});
+}
+function startKaraoke(my){
+  cancelAnimationFrame(kRAF);
+  const tick=()=>{
+    if(my!==speakToken||!ttsOn) return;                 // superseded / stopped -> self-cancel
+    const ct=ttsAudio?ttsAudio.currentTime:0, dur=ttsAudio?ttsAudio.duration:0;
+    let i=kActive;
+    if(kTimes&&kTimes.length){                           // exact per-word times (pre-recorded clips)
+      while(i+1<kTimes.length && ct>=kTimes[i+1]) i++;
+      if(i<0 && ct>=(kTimes[0]||0)) i=0;
+    } else if(dur&&isFinite(dur)&&kCharCum.length){      // estimate from duration (live answers)
+      const frac=ct/dur; i=-1; while(i+1<kCharCum.length && frac>=kCharCum[i+1]) i++;
+    }
+    if(i!==kActive) setActiveWord(i);
+    kRAF=requestAnimationFrame(tick);
+  };
+  kRAF=requestAnimationFrame(tick);
+}
+function stopNow(){
+  if(mode!=='speaking') return;
+  stopSpeaking(); busy=false; mode='idle'; setState('Ready',false);
+  document.querySelectorAll('.chip').forEach(c=>c.disabled=false);
+}
+stateEl.addEventListener('click',stopNow);
+if(stageEl) stageEl.addEventListener('click',()=>{ if(mode==='speaking') stopNow(); });
 function pushHistory(who,text){
   const p=document.createElement('p'); p.innerHTML=`<b>${who}:</b> ${text}`;
   histEl.prepend(p); while(histEl.children.length>3) histEl.lastChild.remove();
@@ -645,6 +708,9 @@ function speakClip(src, fallbackText, done){
   stopSpeaking();
   const my=++speakToken;
   mode='speaking'; setState('Speaking',true); energy=0.6;
+  // load exact per-word timings alongside the clip (e.g. audio/p2.json) for follow-along
+  fetch(src.replace('.mp3','.json')).then(r=>r.ok?r.json():null)
+    .then(d=>{ if(my===speakToken && d && d.t) kTimes=d.t; }).catch(()=>{});
   voicePlay(src, my, done, CONFIG.clipVolume||1.3).catch(e=>{ if(my===speakToken){ console.warn('clip failed, using live voice',e); speak(fallbackText||'', done); } });
 }
 
@@ -673,7 +739,7 @@ async function voicePlay(src, my, done, gain){
   }catch(e){}
   const finish=()=>{ if(my===speakToken){ ttsOn=false; mode='idle'; setState('Ready',false); done&&done(); } if(src&&src.indexOf('blob:')===0){ try{URL.revokeObjectURL(src);}catch(e){} } };
   ttsAudio.onended=finish; ttsAudio.onerror=finish;
-  ttsOn=true; pumpTts();
+  ttsOn=true; pumpTts(); startKaraoke(my);
   await ttsAudio.play();
 }
 function pumpTts(){ if(ttsOn && ttsAnalyser){ ttsAnalyser.getByteFrequencyData(ttsData); requestAnimationFrame(pumpTts); } }
@@ -691,7 +757,7 @@ function browserSpeak(text,done){
 }
 
 function stopSpeaking(){
-  speakToken++; ttsOn=false;
+  speakToken++; ttsOn=false; cancelAnimationFrame(kRAF);
   if(ttsAudio){ try{ ttsAudio.pause(); ttsAudio.currentTime=0; }catch(e){} }
   if(speechSynthesis.speaking||curUtter){ curUtter=null; speechSynthesis.cancel(); }
 }
@@ -700,8 +766,7 @@ function stopSpeaking(){
    8) ASK  -  route a user turn to the brain, speak the answer
    ============================================================================ */
 async function ask(text){
-  if(busy) return; busy=true;
-  document.querySelectorAll('.chip').forEach(c=>c.disabled=true);
+  if(busy) return; const my=++turn; busy=true;         // a pill can supersede this turn
   pushHistory('You',text); showNow('You',text);
   convo.push({role:'user',content:text});
 
@@ -730,13 +795,11 @@ async function ask(text){
     await wait(650+Math.random()*500);               // offline demo: feel of thinking
   }
 
+  if(my!==turn) return;                                // a pill took over while we were thinking
   convo.push({role:'assistant',content:reply});
   if(hl&&CAPS[hl]) highlight(hl);
   showNow('Mia',reply); pushHistory('Mia',reply);
-  speak(reply,()=>{
-    busy=false;
-    document.querySelectorAll('.chip').forEach(c=>c.disabled=false);
-  });
+  speak(reply,()=>{ if(my===turn) busy=false; });
 }
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 
