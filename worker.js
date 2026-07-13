@@ -354,7 +354,7 @@ function capReply(t) {
 // ── Free voice: Microsoft Edge TTS in Luna (en-SG), +8%, over WebSocket. Returns mp3. ──
 // If anything fails it returns 502, and the page falls back to the browser voice (never silent).
 const EDGE_VOICE = "en-SG-LunaNeural";   // Singapore English voice
-const EDGE_RATE = "+33%";
+const EDGE_RATE = "+25%";
 const EDGE_PITCH = "+0Hz";   // NO pitch shift: pitch-shifting a neural voice sounds synthetic (user picked this in the audit)
 const EDGE_VOLUME = "+50%";  // Edge's max boost (~-17 LUFS)
 const EDGE_TOKEN = "6A5AA1D4EAFF4E9FB37E23D68491D6F4";
