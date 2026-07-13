@@ -120,7 +120,6 @@ export default {
 
     // Streaming path: emit Claude's words as they generate so the page can speak
     // sentence-by-sentence (first audio in ~1.5s instead of waiting for the whole reply).
-    if (body.stream === true) return askStream(env, messages);
 
     const reqBody = JSON.stringify({
       model: MODEL,
@@ -170,7 +169,7 @@ function toReply(raw) {
   const jm = t.match(/"reply"\s*:\s*"((?:[^"\\]|\\.)*)"/);        // model wrapped it in JSON?
   if (jm) t = jm[1].replace(/\\"/g, '"').replace(/\\n/g, ' ');
   else t = t.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();  // stray code fences
-  t = capSentences(clean(t), MAX_SENTENCES) || "Sorry, say that again?";   // same short-and-sweet cap as the stream
+  t = capReply(clean(t)) || "Sorry, say that again?";   // short and sweet: <=3 sentences, <=40 words
   return { reply: t, highlight: pickHighlight(t) };
 }
 function pickHighlight(text) {
@@ -213,90 +212,21 @@ function nthSentenceEnd(t, n) {
   }
   return -1;
 }
-function capSentences(t, n) { const e = nthSentenceEnd(t, n); return e >= 0 ? t.slice(0, e).trim() : t.trim(); }
-
-// ── Streaming answer: proxy Claude's SSE and re-emit ONLY the spoken text, as a plain
-// text stream. The page reads it, and the moment a full sentence lands it voices that
-// sentence while Claude keeps writing. On any upstream failure we return a JSON sentinel
-// (no reply) so the page falls back to its instant scripted answer, never dead air. ──
-async function askStream(env, messages) {
-  let upstream;
-  try {
-    upstream = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 130,
-        thinking: { type: "disabled" },
-        system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
-        messages,
-        stream: true,
-      }),
-    });
-  } catch (e) { console.error("askStream fetch", e); return json({ reply: null, error: true }, 200); }
-  if (!upstream.ok || !upstream.body) {
-    console.error("askStream upstream", upstream && upstream.status);
-    return json({ reply: null, error: true }, 200);
+// Keep the reply short and sweet: at most MAX_SENTENCES sentences, and stop before a sentence
+// that would push past MAX_WORDS. Always cut on a clean sentence boundary (Haiku ignores "be brief").
+function capReply(t) {
+  let out = "", rest = String(t || "").trim(), words = 0, count = 0;
+  while (count < MAX_SENTENCES) {
+    const e = nthSentenceEnd(rest, 1);
+    if (e < 0) break;
+    const s = rest.slice(0, e), w = s.split(/\s+/).filter(Boolean).length;
+    if (count >= 1 && words + w > MAX_WORDS) break;   // don't start another long one
+    out += s; rest = rest.slice(e); words += w; count++;
   }
-  const { readable, writable } = new TransformStream();
-  const writer = writable.getWriter();
-  const enc = new TextEncoder();
-  (async () => {
-    const dec = new TextDecoder();
-    const reader = upstream.body.getReader();
-    let buf = "", pending = "", words = 0, sents = 0, capped = false;
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += dec.decode(value, { stream: true });
-        let nl;
-        while ((nl = buf.indexOf("\n")) >= 0) {
-          const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
-          if (!line.startsWith("data:")) continue;
-          const p = line.slice(5).trim();
-          if (!p || p === "[DONE]") continue;
-          try {
-            const ev = JSON.parse(p);
-            if (ev.type === "content_block_delta" && ev.delta && typeof ev.delta.text === "string" && ev.delta.text) {
-              // Forward one COMPLETE sentence at a time; stop once it's short and sweet.
-              pending += ev.delta.text;
-              let e;
-              while ((e = nthSentenceEnd(pending, 1)) >= 0) {
-                const s = pending.slice(0, e); pending = pending.slice(e);
-                const w = s.split(/\s+/).filter(Boolean).length;
-                if (sents >= 1 && words + w > MAX_WORDS) { capped = true; break; }   // don't start another long one
-                await writer.write(enc.encode(s)); sents++; words += w;
-                if (sents >= MAX_SENTENCES) { capped = true; break; }
-              }
-              if (capped) { try { await reader.cancel(); } catch (_) {} break; }
-            }
-          } catch (_) {}
-        }
-        if (capped) break;
-      }
-    } catch (_) {}
-    finally {
-      // Forward the trailing (unterminated) sentence, but honour the cap: drop a runaway
-      // tail unless it's the only thing we have. Keeps a truncated final sentence from leaking.
-      try {
-        if (!capped && pending.trim()) {
-          const pw = pending.trim().split(/\s+/).filter(Boolean).length;
-          if (sents === 0 || words + pw <= MAX_WORDS) await writer.write(enc.encode(pending));
-        }
-      } catch (_) {}
-      try { await writer.close(); } catch (_) {}
-    }
-  })();
-  return new Response(readable, {
-    headers: { ...CORS, "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-cache" },
-  });
+  out = out.trim();
+  return out || rest.trim() || String(t || "").trim();
 }
+
 
 // ── Free voice: Microsoft Edge TTS in Luna (en-SG), +8%, over WebSocket. Returns mp3. ──
 // If anything fails it returns 502, and the page falls back to the browser voice (never silent).

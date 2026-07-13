@@ -392,11 +392,6 @@ const CONFIG = {
   // Mia's voice. true = worker TTS (Luna). false = browser voice. Falls back automatically.
   useElevenLabs: true,
 
-  // Live replies: false = simple + robust (get the whole reply, make ONE clip, play it like a
-  // pill). true = stream sentence-by-sentence (faster first word, but far more moving parts).
-  // Kept simple on purpose after streaming proved fragile.
-  stream: false,
-
   // Loudness boost. Mobile plays Web Audio at unity gain, which is soft.
   // Loudness. Live ElevenLabs is quieter so it gets more boost; the pre-recorded
   // clips are already normalized loud, so they get less. A peak limiter stops clipping.
@@ -783,8 +778,7 @@ function pickVoice(){
 speechSynthesis.onvoiceschanged=pickVoice; pickVoice();
 
 let curUtter=null, ttsAudio=null, ttsSource=null, ttsAnalyser=null, ttsData=null, ttsOn=false, speakToken=0, ttsGain=null;
-let curAudio=null, liveAudio=null, liveSrc=null, liveGain=null;   // live path (boosted via Web Audio) vs clips (plain)
-let playResolve=null;   // resolver for the sentence currently playing in the streaming path (so Stop unblocks it)
+let curAudio=null;   // the audio element currently playing (greeting / pill / live), so Stop can pause it
 
 // LIVE voice: generate Christine speech from arbitrary text (free-form spoken questions).
 function speak(text,done){
@@ -834,36 +828,6 @@ async function voicePlay(src, my, done, gain){
   ttsOn=true; startKaraoke(my);
   await ttsAudio.play();
 }
-// LIVE answers get a boosted Web Audio path (gain + gentle limiter) so hold-to-talk is
-// as loud as the pre-recorded pills. Clips stay on a plain element (the iOS loudspeaker
-// fix). Live only runs where speech input works (desktop/Android), so routing it through
-// the AudioContext is safe; iOS never reaches here (no speech recognition).
-async function liveVoicePlay(src, my, done, gain){
-  if(my!==speakToken) return;
-  // Boosted (loud, matches the pills) path ONLY off iOS and when the context is confirmed
-  // RUNNING. On iOS the AudioContext routes to the earpiece, so we fall through to plain.
-  if(!IS_IOS && audioCtx && audioCtx.state==='running'){
-    try{
-      if(!liveAudio){ liveAudio=new Audio(); liveAudio.playsInline=true; }
-      liveAudio.src=src; liveAudio.volume=1;
-      if(!liveSrc){
-        liveSrc=audioCtx.createMediaElementSource(liveAudio);
-        liveGain=audioCtx.createGain();
-        const lim=audioCtx.createDynamicsCompressor();
-        lim.threshold.value=-1.5; lim.knee.value=8; lim.ratio.value=6; lim.attack.value=0.004; lim.release.value=0.18;
-        liveSrc.connect(liveGain); liveGain.connect(lim); lim.connect(audioCtx.destination);
-      }
-      liveGain.gain.value = gain || 3;
-      curAudio=liveAudio;
-      const finish=()=>{ if(my===speakToken){ ttsOn=false; mode='idle'; setState('Ready',false); done&&done(); } if(src&&src.indexOf('blob:')===0){ try{URL.revokeObjectURL(src);}catch(e){} } };
-      liveAudio.onended=finish; liveAudio.onerror=finish;
-      ttsOn=true; startKaraoke(my);
-      await liveAudio.play();
-      return;                       // boosted playback succeeded
-    }catch(e){ /* fall through to the reliable plain path */ }
-  }
-  return voicePlay(src, my, done, gain);   // FALLBACK: plain audio, never silent (a touch quieter)
-}
 function pumpTts(){ if(ttsOn && ttsAnalyser){ ttsAnalyser.getByteFrequencyData(ttsData); requestAnimationFrame(pumpTts); } }
 
 function browserSpeak(text,done){
@@ -881,170 +845,9 @@ function browserSpeak(text,done){
 
 function stopSpeaking(){
   speakToken++; ttsOn=false; cancelAnimationFrame(kRAF);
-  if(playResolve){ const f=playResolve; playResolve=null; f(); }   // cleanly end the streaming sentence in flight (pauses its element)
-  if(curAudio){ try{ curAudio.pause(); }catch(e){} }               // whatever's playing right now (fresh live element or a clip)
+  if(curAudio){ try{ curAudio.pause(); }catch(e){} }               // whatever's playing right now (greeting / pill / live clip)
   if(ttsAudio){ try{ ttsAudio.pause(); ttsAudio.currentTime=0; }catch(e){} }
-  if(liveAudio){ try{ liveAudio.pause(); liveAudio.currentTime=0; }catch(e){} }
   if(speechSynthesis.speaking||curUtter){ curUtter=null; speechSynthesis.cancel(); }
-}
-
-/* ============================================================================
-   7b) STREAMING  -  speak Mia's reply sentence-by-sentence as it's written, so the
-   first words come ~1.5s in instead of after the whole reply + whole clip renders.
-   ============================================================================ */
-// find the end of the first complete sentence in buf; -1 if none yet (wait for more).
-function sentenceCut(buf){
-  for(let i=0;i<buf.length;i++){
-    const c=buf[i];
-    if(c==='.'||c==='!'||c==='?'){
-      if(c==='.' && /\d/.test(buf[i-1]||'') && /\d/.test(buf[i+1]||'')) continue;   // 3.9 -> not a boundary
-      let j=i; while(j+1<buf.length && '.!?'.indexOf(buf[j+1])>=0) j++;              // eat "?!" runs
-      const after=buf[j+1];
-      if(after===undefined) return -1;                                              // punctuation at buffer end: wait
-      if(after===' '||after==='\n'||after==='\t'||after==='"'||after==="'") return j+1;
-    }
-  }
-  return -1;
-}
-// FIRST chunk only: get speech going ASAP. Use a full sentence if one's ready and short,
-// else break at an early clause (comma/semicolon) once we have enough words. Later chunks
-// use whole sentences for natural prosody.
-function firstCut(buf){
-  const s=sentenceCut(buf);
-  if(s>0 && s<=90) return s;                       // short full sentence already available
-  if(buf.length>=48){
-    for(let i=24;i<buf.length-1;i++){ const c=buf[i]; if((c===','||c===';'||c===':') && buf[i+1]===' ') return i+1; }
-  }
-  return s>0 ? s : -1;
-}
-// start a fresh Mia line for the streamed words
-function startMiaLine(){
-  nowWho.textContent='Mia'; nowWho.className='who';
-  nowEl.classList.remove('dim');
-  nowText.innerHTML=''; kWords=[]; kActive=-1; kTimes=null; kCharCum=[];
-  const c=el('convo'); if(c) requestAnimationFrame(()=>{ c.scrollTop=nowEl.offsetTop; });
-}
-// append one sentence's words as spans; return its karaoke range within the whole line
-function appendSentence(sentence){
-  const words=sentence.split(/\s+/).filter(Boolean);
-  const wStart=kWords.length;
-  const frag=document.createDocumentFragment();
-  words.forEach(w=>{ const sp=document.createElement('span'); sp.className='w'; sp.textContent=w; frag.appendChild(sp); frag.appendChild(document.createTextNode(' ')); });
-  nowText.appendChild(frag);
-  kWords=Array.prototype.slice.call(nowText.querySelectorAll('.w'));
-  let total=0; const lens=words.map(w=>{ const L=w.length+1; total+=L; return L; });
-  let acc=0; const charCum=lens.map(L=>{ const f=acc/(total||1); acc+=L; return f; });
-  return {wStart, wCount:words.length, charCum};
-}
-function makeItem(raw){
-  const sentence=raw.replace(/\s*[—–]\s*/g,', ').replace(/\s+/g,' ').trim();
-  const k=appendSentence(sentence);
-  return {sentence, wStart:k.wStart, wCount:k.wCount, charCum:k.charCum, ready:false, url:null, gain:0, failed:false};
-}
-// fetch the voice for one sentence (Edge TTS) + measure a matching loudness gain
-async function synthItem(item){
-  try{
-    const r=await fetch(CONFIG.workerUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:item.sentence})});
-    if(!r.ok || !/audio/i.test(r.headers.get('content-type')||'')){ item.failed=true; item.ready=true; return; }
-    const buf=await r.arrayBuffer();
-    item.url=URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'})); item.ready=true;   // plain playback -> no per-clip loudness measurement needed
-  }catch(e){ item.failed=true; item.ready=true; }
-}
-// karaoke for the sentence currently playing (proportional to that clip's progress)
-function karaokeItem(myTok,item){
-  cancelAnimationFrame(kRAF);
-  const tick=()=>{
-    if(myTok!==speakToken||!ttsOn) return;
-    const a=curAudio, ct=a?a.currentTime:0, dur=a?a.duration:0;
-    let local=-1;
-    if(dur&&isFinite(dur)&&item.charCum.length){ const frac=ct/dur; while(local+1<item.charCum.length && frac>=item.charCum[local+1]) local++; }
-    const target=item.wStart+(local<0?0:local);
-    if(target!==kActive) setActiveWord(target);
-    kRAF=requestAnimationFrame(tick);
-  };
-  kRAF=requestAnimationFrame(tick);
-}
-// Play one prepared sentence; resolves when it ends (or Stop releases it).
-// ROBUST BY DESIGN: a FRESH plain <audio> element per sentence (no shared Web Audio graph to
-// wedge, plays on the loudspeaker on every device incl. iPhone), plus a watchdog that
-// guarantees resolution if a clip stalls / never starts / runs away, so one bad clip can
-// NEVER freeze the turn (a frozen turn is what jams the mic).
-function playItem(myTok,item){
-  return new Promise((resolve)=>{
-    const a=new Audio(); a.playsInline=true; a.preload='auto';
-    let fin=false, iv=null;
-    function done(){ if(fin) return; fin=true; if(iv){ clearInterval(iv); iv=null; } try{ a.pause(); }catch(e){} if(playResolve===done) playResolve=null; resolve(); }
-    if(myTok!==speakToken){ resolve(); return; }
-    playResolve=done;                    // so Stop / barge-in cleanly ends THIS clip
-    mode='speaking'; setState('Speaking',true); energy=0.6;
-    a.src=item.url; a.volume=1; curAudio=a; ttsOn=true;
-    a.onended=done; a.onerror=done;
-    let ticks=0, moved=false, lastCt=0, stall=0;
-    iv=setInterval(()=>{
-      if(myTok!==speakToken){ done(); return; }
-      ticks++; const ct=a.currentTime||0;
-      if(ct>0.15) moved=true;
-      if(ct>lastCt+0.02){ lastCt=ct; stall=0; } else { stall++; }
-      if(!moved && ticks>=34) done();            // ~2s and never started -> skip
-      else if(moved && stall>=34) done();         // started then frozen ~2s -> skip
-      else if(ticks>=250) done();                 // hard cap ~15s (no sentence clip is longer)
-    }, 60);
-    karaokeItem(myTok,item);
-    a.play().catch(()=>done());
-  });
-}
-// orchestrate: stream text -> segment -> synth each sentence -> play in order.
-// returns {spoke:true} if it handled the turn (even partially); throws BEFORE any audio
-// so ask() can fall back to the scripted answer. A JSON body (cap / upstream error) also
-// throws with .fallbackReply so ask() speaks that line instead.
-async function streamAnswer(my){
-  stopSpeaking(); const myTok=++speakToken;
-  const ctrl=new AbortController(); const to=setTimeout(()=>{ try{ctrl.abort();}catch(e){} }, 12000);
-  let r;
-  try{ r=await fetch(CONFIG.workerUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:convo,stream:true}),signal:ctrl.signal}); }
-  catch(e){ clearTimeout(to); throw e; }
-  if(!r.ok || !r.body){ clearTimeout(to); throw new Error('stream '+(r&&r.status)); }
-  if(/application\/json/i.test(r.headers.get('content-type')||'')){        // cap or upstream-error sentinel
-    let j=null; try{ j=await r.json(); }catch(e){} clearTimeout(to);
-    throw {fallbackReply: j && j.reply};
-  }
-  startMiaLine();
-  const items=[]; let playIdx=0, streamDone=false;
-  const player=(async()=>{
-    while(myTok===speakToken){
-      if(playIdx>=items.length){ if(streamDone) break; await wait(25); continue; }
-      const item=items[playIdx];
-      if(!item.ready){ await wait(20); continue; }
-      if(!item.failed && item.url){ await playItem(myTok,item); if(item.url){ try{URL.revokeObjectURL(item.url);}catch(e){} } }
-      playIdx++;
-    }
-  })();
-  const reader=r.body.getReader(); const dec=new TextDecoder(); let buf='', emitted=0;
-  try{
-    while(true){
-      const {done,value}=await reader.read();
-      if(my!==turn||myTok!==speakToken){ try{ctrl.abort();}catch(e){} break; }
-      if(done) break;
-      buf+=dec.decode(value,{stream:true});
-      let cut;
-      while((cut=(emitted===0?firstCut(buf):sentenceCut(buf)))>0){
-        const sentence=buf.slice(0,cut).trim(); buf=buf.slice(cut);
-        if(sentence){ const item=makeItem(sentence); items.push(item); synthItem(item); emitted++;
-          const h=pickHighlight(items.map(function(i){return i.sentence;}).join(' ')); if(h!=='none') highlight(h); }
-      }
-    }
-  }catch(e){ /* aborted / network drop: keep whatever we already have */ }
-  clearTimeout(to);
-  const rest=buf.trim();
-  if(rest && my===turn && myTok===speakToken){ const item=makeItem(rest); items.push(item); synthItem(item); }
-  streamDone=true;
-  await player;
-  const full=items.map(it=>it.sentence).join(' ').replace(/\s+/g,' ').trim();
-  if(my===turn){
-    if(full){ convo.push({role:'assistant',content:full}); pushHistory('Mia',full); }
-    ttsOn=false; mode='idle'; setState('Ready',false); busy=false;
-  }
-  return {spoke: full!=='' };
 }
 
 /* ============================================================================
@@ -1055,7 +858,12 @@ async function ask(text){
   // Last-resort safety: never let a wedged turn leave the mic permanently busy. If this turn
   // is somehow still busy after a long ceiling (far longer than any real reply), free it so
   // the next hold-to-talk always works.
-  clearTimeout(ask._guard); ask._guard=setTimeout(()=>{ if(turn===my && busy){ stopSpeaking(); busy=false; mode='idle'; setState('Ready',false); } }, 22000);
+  clearTimeout(ask._guard);
+  (function arm(){ ask._guard=setTimeout(()=>{
+    if(turn!==my || !busy) return;                                        // turn finished or superseded
+    if(curAudio && !curAudio.paused && !curAudio.ended){ arm(); return; } // still talking -> never cut a live reply
+    stopSpeaking(); busy=false; mode='idle'; setState('Ready',false);     // genuinely wedged -> free the mic
+  }, 12000); })();
   pushHistory('You',text); showNow('You',text);
   convo.push({role:'user',content:text});
 
@@ -1068,20 +876,11 @@ async function ask(text){
   if(hit){ reply=hit.a; hl=hit.h; }
   else { const i=_fb; reply=nextFallback(); hl=FB_HL[i%FB_HL.length]; }
 
-  // LIVE-FIRST, STREAMED: speak Mia's reply sentence-by-sentence as Claude writes it.
-  // streamAnswer owns the whole turn when it works (display, voice, history, busy).
-  if(CONFIG.workerUrl && CONFIG.useElevenLabs && CONFIG.stream!==false){
+  // LIVE: one Claude call for the whole reply. If it fails or times out, we keep the scripted
+  // answer above, so there's never dead air. (Simple + robust; the voice is one clip below.)
+  if(CONFIG.workerUrl){
     try{
-      const res=await streamAnswer(my);
-      if(res && res.spoke) return;                   // handled end to end
-    }catch(e){
-      if(e && typeof e.fallbackReply==='string' && e.fallbackReply){ reply=e.fallbackReply; }  // cap message: speak it
-      else console.warn('stream failed pre-audio, using scripted fallback',e);
-      if(my!==turn) return;
-    }
-  }else if(CONFIG.workerUrl){                         // streaming off: one-shot Claude call
-    try{
-      const ctrl=new AbortController(), to=setTimeout(()=>ctrl.abort(),10000);   // non-stream waits for the whole reply
+      const ctrl=new AbortController(), to=setTimeout(()=>ctrl.abort(),10000);
       const r=await fetch(CONFIG.workerUrl,{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({messages:convo}),signal:ctrl.signal});
       clearTimeout(to);
