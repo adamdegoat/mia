@@ -32,6 +32,7 @@ USING LIVE DATA (sections are appended below; they are your real, current knowle
 - TODAY'S PROPSIGHT NEWS: the REAL property stories PropSight published today. You ARE the news desk, so when asked about the latest news, what's happening, or the mood, LEAD with an actual story, name it and give its plain-language meaning in a line or two. Do NOT deflect to propsight.sg, and do NOT just say a news engine exists; give the actual story.
 - THIS MONTH'S PROPSIGHT MARKET ANALYSIS: the real current thesis and figures. When asked how the market is doing, where prices are heading, or which segment is strong, LEAD with these real numbers (the headline move, the leading segment, a figure or two), said naturally, not as a data dump. Do not recite every number; pick the ones that answer them.
 - PROPSIGHT AREA GUIDE BRIEFS: one line for each HDB town. When someone asks about a specific town, use its brief; do not invent details for a town that is not listed.
+- VALUATION DATA: sometimes attached when someone asks what a property is worth. It holds real recent Caveat figures for exactly what they named. Quote the median as the anchor ("around $X"), give the band naturally ("most sell between A and B"), and mention it comes from the sample of recent sales and about the psf. Always frame it as a resale estimate range, not a bank valuation. If someone asks what a place is worth but NO valuation data is attached, do not guess a number: ask for the town and flat type for an HDB, or the project name for a condo, and say you will pull the real range.
 - NEVER invent a headline, price, or statistic; only use what these sections provide. If a section you need is missing or empty, say the data is refreshing and answer from what you know, do not fabricate.
 
 WHAT PROPSIGHT DOES (this is your own platform, all real, never invent beyond this):
@@ -156,6 +157,80 @@ async function areaBrief() {
   } catch (e) { console.error("areaBrief", e && e.message); return AREAS.text || ""; }
 }
 
+// ── Live valuation: real recent transactions from PropSight's Caveat model. ──
+// We fetch the compact HDB town x flat-type matrix + the per-project condo summary,
+// then match them to what the person actually asked, so Mia can quote a real number
+// with a real band, instead of only describing the method. Cached 1h; fail-open.
+let VAL = { hdb: null, condos: null, at: 0 };
+async function valData() {
+  const now = Date.now();
+  if ((VAL.hdb || VAL.condos) && now - VAL.at < 3600000) return VAL;
+  try {
+    const opt = { cf: { cacheTtl: 3600, cacheEverything: true } };
+    const [hm, cs] = await Promise.all([
+      fetch("https://propsight.sg/caveat/data/hdb_matrix.json", opt).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch("https://propsight.sg/caveat/data/condo_summary.json", opt).then(r => r.ok ? r.json() : null).catch(() => null),
+    ]);
+    if (hm) VAL.hdb = hm;                                  // {TOWN:{FLAT_TYPE:[med,p25,p75,psf,n]}}
+    if (cs && Array.isArray(cs.rows))                      // fields: project,district,seg,median_price,median_psf,txns,yield
+      VAL.condos = cs.rows.map(r => [String(r[0]).toLowerCase(), r[0], r[3], r[4], r[5], r[6], r[2]]);
+    VAL.at = now;
+  } catch (e) { console.error("valData", e && e.message); }
+  return VAL;
+}
+function grp(n) { return String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+function titleCase(s) { return String(s).toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase()); }
+const FLAT_TYPES = [   // order matters: test exec/5/4/3/2 so "executive" isn't caught as a room count
+  [/\b(?:exec(?:utive)?|jumbo)\b/i, "EXECUTIVE"],
+  [/\b(?:5|five)[\s-]?room\b/i, "5 ROOM"],
+  [/\b(?:4|four)[\s-]?room\b/i, "4 ROOM"],
+  [/\b(?:3|three)[\s-]?room\b/i, "3 ROOM"],
+  [/\b(?:2|two)[\s-]?room\b/i, "2 ROOM"],
+];
+async function valuationFacts(userText) {
+  const t = String(userText || "");
+  if (!t.trim()) return "";
+  const wantsValue = /(worth|valu|how much|price|psf|going for|sell for|estimate|median|market value|going rate)/i.test(t);
+  let ft = null; for (const [re, label] of FLAT_TYPES) if (re.test(t)) { ft = label; break; }
+  const v = await valData();
+  const parts = [];
+  // HDB: a town name present in the text, crossed with a flat type when named.
+  if (v.hdb && (wantsValue || ft)) {
+    const up = t.toUpperCase();
+    let town = null, best = 0;
+    for (const name of Object.keys(v.hdb)) if (up.includes(name) && name.length > best) { town = name; best = name.length; }
+    if (town) {
+      const cells = v.hdb[town];
+      if (ft && cells[ft]) {
+        const c = cells[ft];   // [med, p25, p75, psf, n]
+        parts.push(`HDB ${ft} in ${titleCase(town)}: median resale $${grp(c[0])}, with most sales between $${grp(c[1])} and $${grp(c[2])}, about $${c[3]} psf, from ${c[4]} sales in the last ~15 months.`);
+      } else if (wantsValue) {
+        const ladder = Object.keys(cells).filter(k => cells[k][4] >= 5)
+          .map(k => `${k.toLowerCase()} around $${grp(cells[k][0])}`).join(", ");
+        if (ladder) parts.push(`HDB resale medians in ${titleCase(town)} (last ~15 months): ${ladder}. Ask which flat type for a tighter band.`);
+      }
+    }
+  }
+  // Condo: match a project name as a whole token-run inside the message (needs value intent).
+  if (v.condos && wantsValue) {
+    const lt = " " + t.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim() + " ";
+    let hit = null;
+    for (const row of v.condos) {
+      const nm = row[0].replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+      if (nm.length < 5) continue;                          // skip ultra-short / common names
+      if (lt.includes(" " + nm + " ") && (!hit || nm.length > hit._n)) { hit = row; hit._n = nm.length; }
+    }
+    if (hit) {
+      let s = `Condo ${hit[1]}: median resale $${grp(hit[2])}`;
+      if (hit[3]) s += `, about $${hit[3]} psf`;
+      if (hit[4]) s += `, across ${hit[4]} recent sales`;
+      if (hit[5]) s += `, gross rental yield around ${hit[5]}%`;
+      parts.push(s + ". Project-level resale band; individual units vary by size, floor and facing.");
+    }
+  }
+  return parts.join("\n");
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") return new Response(null, { headers: CORS });
@@ -177,6 +252,11 @@ export default {
     if (news) systemBlocks.push({ type: "text", text: "TODAY'S PROPSIGHT NEWS (real, current, published on propsight.sg today):\n" + news });
     if (market) systemBlocks.push({ type: "text", text: "THIS MONTH'S PROPSIGHT MARKET ANALYSIS (real, current figures; lead with these when asked how the market is doing):\n" + market });
     if (areas) systemBlocks.push({ type: "text", text: "PROPSIGHT AREA GUIDE BRIEFS (one line per HDB town; use the matching one when asked about a specific town):\n" + areas });
+
+    // Live valuation: if they named a property to value, attach the real Caveat figures.
+    const lastUser = [...messages].reverse().find(m => m && m.role === "user");
+    const valuation = await valuationFacts(lastUser && typeof lastUser.content === "string" ? lastUser.content : "");
+    if (valuation) systemBlocks.push({ type: "text", text: "VALUATION DATA for what they just asked (real recent transactions from PropSight's Caveat model; use these EXACT figures, present it as an approximate resale band and not a bank valuation, and mention the sample size):\n" + valuation });
 
     const reqBody = JSON.stringify({
       model: MODEL,
