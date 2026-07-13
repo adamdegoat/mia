@@ -369,6 +369,12 @@ const thread = el('thread');
 let convo = [];               // [{role, content}] for the model
 let busy = false, started = false, turn = 0;
 
+/* Pre-recorded chip answers (built from the live brain, refreshed on demand): tapping a chip
+   plays its saved answer + audio instantly and free. Typed questions always go live.
+   If answers.json is missing, chips fall back to the live worker. */
+let CACHED = {};
+fetch('audio/answers.json', {cache:'no-store'}).then(r=>r.ok?r.json():{}).then(d=>{ CACHED=d||{}; }).catch(()=>{});
+
 /* ---- suggestion chips ---- */
 (function buildChips(){
   const wrap = el('suggest');
@@ -379,7 +385,7 @@ let busy = false, started = false, turn = 0;
     g.chips.forEach(c=>{
       const q = typeof c==='string' ? c : c.q;
       const b=document.createElement('button'); b.className='chip'+(c.lead?' lead':''); b.textContent=q;
-      b.addEventListener('click',()=>{ if(c.lead) leadDemo(q); else send(q); });
+      b.addEventListener('click',()=>{ if(c.lead) leadDemo(q); else if(CACHED[q]) sayCached(q); else send(q); });
       row.appendChild(b);
     });
     grp.appendChild(row); wrap.appendChild(grp);
@@ -455,6 +461,18 @@ async function send(text){
   const m=addMsg('Mia', reply);
   setStatus('speaking'); setSpeaking(m);
   speak(reply, ()=>{ clearSpeaking(m); setStatus('online'); if(my===turn) busy=false; });
+}
+
+/* ---- pre-recorded chip answer: show saved text + play saved audio, no worker call ---- */
+function sayCached(q){
+  if(!started) return;
+  stopSpeaking();
+  const my=++turn; busy=true;
+  addMsg('You', q); convo.push({role:'user',content:q});
+  const a=CACHED[q];
+  const m=addMsg('Mia', a.a); convo.push({role:'assistant',content:a.a});
+  setSpeaking(m); setStatus('speaking');
+  speakClip('audio/'+a.f+'.mp3', a.a, ()=>{ clearSpeaking(m); setStatus('online'); if(my===turn) busy=false; });
 }
 
 /* ---- lead-capture showcase (special chip) ---- */
