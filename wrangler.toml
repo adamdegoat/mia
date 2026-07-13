@@ -1,3 +1,8 @@
 name = "mia-brain"
 main = "worker.js"
 compatibility_date = "2024-11-01"
+
+# Counts for the abuse guard (per-person per-minute + daily total). Free tier is plenty.
+[[kv_namespaces]]
+binding = "MIA_KV"
+id = "c93fb5eb78a24a25b892faff2a46b2ec"

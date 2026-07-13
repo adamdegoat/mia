@@ -746,6 +746,7 @@ function pumpTts(){ if(ttsOn && ttsAnalyser){ ttsAnalyser.getByteFrequencyData(t
 
 function browserSpeak(text,done){
   mode='speaking'; setState('Speaking',true); energy=0.6;
+  document.querySelectorAll('#nowText .w').forEach(w=>w.classList.add('said'));  // no karaoke on browser voice -> show text bright, not dimmed
   const spoken=String(text).replace(/\bMIA\b/gi, CONFIG.sayName);  // fix name pronunciation
   const u=new SpeechSynthesisUtterance(spoken);
   if(chosenVoice) u.voice=chosenVoice;
