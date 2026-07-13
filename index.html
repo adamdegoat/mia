@@ -886,10 +886,11 @@ function browserSpeak(text,done){
 
 function stopSpeaking(){
   speakToken++; ttsOn=false; cancelAnimationFrame(kRAF);
+  if(playResolve){ const f=playResolve; playResolve=null; f(); }   // cleanly end the streaming sentence in flight (pauses its element)
+  if(curAudio){ try{ curAudio.pause(); }catch(e){} }               // whatever's playing right now (fresh live element or a clip)
   if(ttsAudio){ try{ ttsAudio.pause(); ttsAudio.currentTime=0; }catch(e){} }
   if(liveAudio){ try{ liveAudio.pause(); liveAudio.currentTime=0; }catch(e){} }
   if(speechSynthesis.speaking||curUtter){ curUtter=null; speechSynthesis.cancel(); }
-  if(playResolve){ const f=playResolve; playResolve=null; f(); }   // release a paused streaming sentence
 }
 
 /* ============================================================================
@@ -951,12 +952,7 @@ async function synthItem(item){
     const r=await fetch(CONFIG.workerUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:item.sentence})});
     if(!r.ok || !/audio/i.test(r.headers.get('content-type')||'')){ item.failed=true; item.ready=true; return; }
     const buf=await r.arrayBuffer();
-    let gain=CONFIG.voiceVolume||6;
-    try{
-      if(!IS_IOS && !audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
-      if(!IS_IOS && audioCtx){ const ab=await audioCtx.decodeAudioData(buf.slice(0)); const d=ab.getChannelData(0); let s=0,n=0; for(let i=0;i<d.length;i+=32){ s+=d[i]*d[i]; n++; } const rms=Math.sqrt(s/Math.max(1,n)); if(rms>0.00001) gain=Math.min(16,Math.max(1.5,(CONFIG.targetRms||0.16)/rms)); }
-    }catch(e){}
-    item.url=URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'})); item.gain=gain; item.ready=true;
+    item.url=URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'})); item.ready=true;   // plain playback -> no per-clip loudness measurement needed
   }catch(e){ item.failed=true; item.ready=true; }
 }
 // karaoke for the sentence currently playing (proportional to that clip's progress)
@@ -973,54 +969,33 @@ function karaokeItem(myTok,item){
   };
   kRAF=requestAnimationFrame(tick);
 }
-// play one prepared sentence; resolves when it ends (or Stop releases it).
-// A watchdog guarantees resolution even if a clip stalls or autoplay is blocked, so a
-// single bad clip can NEVER freeze the turn (which would leave the mic stuck busy).
+// Play one prepared sentence; resolves when it ends (or Stop releases it).
+// ROBUST BY DESIGN: a FRESH plain <audio> element per sentence (no shared Web Audio graph to
+// wedge, plays on the loudspeaker on every device incl. iPhone), plus a watchdog that
+// guarantees resolution if a clip stalls / never starts / runs away, so one bad clip can
+// NEVER freeze the turn (a frozen turn is what jams the mic).
 function playItem(myTok,item){
   return new Promise((resolve)=>{
+    const a=new Audio(); a.playsInline=true; a.preload='auto';
     let fin=false, iv=null;
-    const done=()=>{ if(fin) return; fin=true; if(iv){ clearInterval(iv); iv=null; } if(playResolve===resolve) playResolve=null; resolve(); };
+    function done(){ if(fin) return; fin=true; if(iv){ clearInterval(iv); iv=null; } try{ a.pause(); }catch(e){} if(playResolve===done) playResolve=null; resolve(); }
     if(myTok!==speakToken){ resolve(); return; }
-    playResolve=resolve;
+    playResolve=done;                    // so Stop / barge-in cleanly ends THIS clip
     mode='speaking'; setState('Speaking',true); energy=0.6;
-    // Watchdog: guarantees this clip resolves so one bad clip can't freeze the turn.
-    // Fires if the clip never starts (blocked autoplay), or starts then FREEZES mid-play
-    // (currentTime stops advancing ~1.5s), or runs absurdly long. Never fires during normal
-    // playback: currentTime keeps advancing through the trailing silence to onended.
-    const guard=(a)=>{ if(iv) clearInterval(iv); let ticks=0, moved=false, lastCt=0, stall=0; iv=setInterval(()=>{
+    a.src=item.url; a.volume=1; curAudio=a; ttsOn=true;
+    a.onended=done; a.onerror=done;
+    let ticks=0, moved=false, lastCt=0, stall=0;
+    iv=setInterval(()=>{
       if(myTok!==speakToken){ done(); return; }
       ticks++; const ct=a.currentTime||0;
       if(ct>0.15) moved=true;
       if(ct>lastCt+0.02){ lastCt=ct; stall=0; } else { stall++; }
-      if(!moved && ticks>=27) done();             // ~1.6s, never started -> skip
-      else if(moved && stall>=26) done();          // started then frozen ~1.5s -> skip
-      else if(ticks>=550) done();                  // ~33s hard cap
-    }, 60); };
-    const plain=()=>{
-      if(!ttsAudio){ ttsAudio=new Audio(); ttsAudio.playsInline=true; ttsAudio.preload='auto'; }
-      ttsAudio.src=item.url; ttsAudio.volume=1; curAudio=ttsAudio; ttsOn=true;
-      ttsAudio.onended=done; ttsAudio.onerror=done;
-      karaokeItem(myTok,item); guard(ttsAudio); ttsAudio.play().catch(()=>done());
-    };
-    if(!IS_IOS && audioCtx && audioCtx.state==='running'){
-      try{
-        if(!liveAudio){ liveAudio=new Audio(); liveAudio.playsInline=true; }
-        liveAudio.src=item.url; liveAudio.volume=1;
-        if(!liveSrc){
-          liveSrc=audioCtx.createMediaElementSource(liveAudio);
-          liveGain=audioCtx.createGain();
-          const lim=audioCtx.createDynamicsCompressor();
-          lim.threshold.value=-1.5; lim.knee.value=8; lim.ratio.value=6; lim.attack.value=0.004; lim.release.value=0.18;
-          liveSrc.connect(liveGain); liveGain.connect(lim); lim.connect(audioCtx.destination);
-        }
-        liveGain.gain.value=item.gain||6; curAudio=liveAudio; ttsOn=true;
-        liveAudio.onended=done; liveAudio.onerror=done;
-        karaokeItem(myTok,item); guard(liveAudio);
-        liveAudio.play().catch(()=>plain());   // boosted; if the element is busy, drop to plain
-        return;
-      }catch(e){}
-    }
-    plain();
+      if(!moved && ticks>=34) done();            // ~2s and never started -> skip
+      else if(moved && stall>=34) done();         // started then frozen ~2s -> skip
+      else if(ticks>=250) done();                 // hard cap ~15s (no sentence clip is longer)
+    }, 60);
+    karaokeItem(myTok,item);
+    a.play().catch(()=>done());
   });
 }
 // orchestrate: stream text -> segment -> synth each sentence -> play in order.
