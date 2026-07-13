@@ -132,7 +132,7 @@ export default {
 
     const reqBody = JSON.stringify({
       model: MODEL,
-      max_tokens: 110,   // hard cap: keeps replies to 2-3 spoken sentences AND cuts latency
+      max_tokens: 85,   // hard cap: 2 tight spoken sentences, shorter = faster to generate + speak
       thinking: { type: "disabled" },   // short spoken replies: faster, cheaper, no stray thinking blocks
       // Knowledge Pack is stable, so cache it: re-billed at ~10% on later turns.
       system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],

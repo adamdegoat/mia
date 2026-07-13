@@ -669,7 +669,7 @@ function endListen(){
   if(recog&&recognizing){ try{ recog.stop(); }catch(e){} }
   releaseMic();                 // let go of the mic so Mia plays loud again (esp. on phones)
   mode='idle'; setState('Ready',false);
-  setTimeout(()=>{ if(heard) ask(heard); else nowEl.classList.add('dim'); },250);
+  setTimeout(()=>{ if(heard) ask(heard); else nowEl.classList.add('dim'); },120);
 }
 
 /* push-to-talk bindings (mouse, touch, spacebar) with barge-in */
@@ -740,7 +740,7 @@ async function elevenSpeak(text,my,done){
     const rms=Math.sqrt(sum/Math.max(1,n));
     if(rms>0.00001){ gain=Math.min(16, Math.max(1.5, (CONFIG.targetRms||0.16)/rms)); }
   }catch(e){}
-  await voicePlay(URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'})), my, done, gain);  // plain path (reliable); loudness from Edge volume, not Web Audio
+  await liveVoicePlay(URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'})), my, done, gain);  // boosted if ctx running, else plain fallback
 }
 
 // PRE-RECORDED voice: play a stored Christine clip (greeting + pills). Free, instant, consistent.
@@ -775,25 +775,29 @@ async function voicePlay(src, my, done, gain){
 // the AudioContext is safe; iOS never reaches here (no speech recognition).
 async function liveVoicePlay(src, my, done, gain){
   if(my!==speakToken) return;
-  if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
-  if(!liveAudio){ liveAudio=new Audio(); liveAudio.playsInline=true; }
-  liveAudio.src=src; liveAudio.volume=1;
-  try{
-    if(audioCtx && !liveSrc){
-      liveSrc=audioCtx.createMediaElementSource(liveAudio);
-      liveGain=audioCtx.createGain();
-      const lim=audioCtx.createDynamicsCompressor();   // gentle: lift loudness, catch peaks, minimal pumping
-      lim.threshold.value=-1.5; lim.knee.value=8; lim.ratio.value=6; lim.attack.value=0.004; lim.release.value=0.18;
-      liveSrc.connect(liveGain); liveGain.connect(lim); lim.connect(audioCtx.destination);
-    }
-    if(liveGain) liveGain.gain.value = gain || 3;
-    if(audioCtx && audioCtx.state==='suspended') await audioCtx.resume();
-  }catch(e){}
-  curAudio=liveAudio;
-  const finish=()=>{ if(my===speakToken){ ttsOn=false; mode='idle'; setState('Ready',false); done&&done(); } if(src&&src.indexOf('blob:')===0){ try{URL.revokeObjectURL(src);}catch(e){} } };
-  liveAudio.onended=finish; liveAudio.onerror=finish;
-  ttsOn=true; startKaraoke(my);
-  await liveAudio.play();
+  // Boosted (loud, matches the pills) path ONLY when the context is confirmed RUNNING,
+  // otherwise it would play silent. The context is created + resumed in the Begin tap.
+  if(audioCtx && audioCtx.state==='running'){
+    try{
+      if(!liveAudio){ liveAudio=new Audio(); liveAudio.playsInline=true; }
+      liveAudio.src=src; liveAudio.volume=1;
+      if(!liveSrc){
+        liveSrc=audioCtx.createMediaElementSource(liveAudio);
+        liveGain=audioCtx.createGain();
+        const lim=audioCtx.createDynamicsCompressor();
+        lim.threshold.value=-1.5; lim.knee.value=8; lim.ratio.value=6; lim.attack.value=0.004; lim.release.value=0.18;
+        liveSrc.connect(liveGain); liveGain.connect(lim); lim.connect(audioCtx.destination);
+      }
+      liveGain.gain.value = gain || 3;
+      curAudio=liveAudio;
+      const finish=()=>{ if(my===speakToken){ ttsOn=false; mode='idle'; setState('Ready',false); done&&done(); } if(src&&src.indexOf('blob:')===0){ try{URL.revokeObjectURL(src);}catch(e){} } };
+      liveAudio.onended=finish; liveAudio.onerror=finish;
+      ttsOn=true; startKaraoke(my);
+      await liveAudio.play();
+      return;                       // boosted playback succeeded
+    }catch(e){ /* fall through to the reliable plain path */ }
+  }
+  return voicePlay(src, my, done, gain);   // FALLBACK: plain audio, never silent (a touch quieter)
 }
 function pumpTts(){ if(ttsOn && ttsAnalyser){ ttsAnalyser.getByteFrequencyData(ttsData); requestAnimationFrame(pumpTts); } }
 
@@ -836,7 +840,7 @@ async function ask(text){
 
   if(CONFIG.workerUrl){                              // live-first: try Claude
     try{
-      const ctrl=new AbortController(), to=setTimeout(()=>ctrl.abort(),8000);
+      const ctrl=new AbortController(), to=setTimeout(()=>ctrl.abort(),6000);
       const r=await fetch(CONFIG.workerUrl,{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({messages:convo}),signal:ctrl.signal});
       clearTimeout(to);
@@ -873,6 +877,13 @@ el('begin').addEventListener('click',()=>{
   // with an assistant turn, which broke the first pill/question.
   showNow('Mia',OPENING); highlight('conversational');
   speakClip('audio/greeting.mp3', OPENING);   // plays within the tap gesture -> sounds on mobile
+  // Where live hold-to-talk works (desktop/Android with speech recognition), create + resume
+  // the AudioContext INSIDE this tap so it's RUNNING for the boosted live path. Skipped on iOS
+  // (no speech recognition there), so clips stay on the plain loudspeaker path untouched.
+  if(SR){
+    if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+    if(audioCtx && audioCtx.state==='suspended'){ audioCtx.resume().catch(()=>{}); }
+  }
 });
 
 /* browser support note */
