@@ -176,10 +176,11 @@ footer{
 }
 .ptt{
   appearance:none;border:0;cursor:pointer;flex:0 0 auto;
-  display:flex;align-items:center;gap:12px;
+  display:flex;align-items:center;justify-content:center;gap:11px;
+  height:54px;box-sizing:border-box;padding:0 24px;
   background:var(--ember);color:#160a04;
   font-family:"Space Grotesk";font-weight:600;font-size:15px;letter-spacing:.01em;
-  padding:15px 24px;border-radius:999px;
+  border-radius:999px;
   transition:transform .12s ease,background .2s ease,box-shadow .2s ease;
   box-shadow:0 6px 24px -8px rgba(255,106,43,.6);
   user-select:none;-webkit-user-select:none;touch-action:none;
@@ -193,12 +194,19 @@ footer{
 /* composer: mic OR type */
 .composer{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;width:100%}
 .cor{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted-2);flex:0 0 auto}
-.tin{flex:1 1 240px;min-width:0;max-width:400px;background:rgba(242,237,230,.05);border:1px solid var(--line-2);
-  border-radius:999px;padding:13px 18px;color:var(--text);font-family:"Space Grotesk";font-size:15px;transition:border-color .2s ease}
+.tin{
+  flex:1 1 260px;min-width:0;max-width:440px;
+  height:54px;box-sizing:border-box;padding:0 22px;
+  background:rgba(242,237,230,.06);border:1px solid var(--line-2);border-radius:27px;
+  color:var(--text);font-family:"Space Grotesk";font-size:16px;line-height:normal;
+  transition:border-color .2s ease,background .2s ease;
+}
 .tin::placeholder{color:var(--muted-2)}
-.tin:focus{outline:none;border-color:var(--ember)}
-.send{flex:0 0 auto;width:46px;height:46px;border-radius:50%;border:0;background:var(--ember);color:#160a04;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;transition:background .2s ease}
+.tin:focus{outline:none;border-color:var(--ember);background:rgba(242,237,230,.09)}
+.send{
+  flex:0 0 auto;width:54px;height:54px;border-radius:50%;border:0;background:var(--ember);color:#160a04;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:background .2s ease;
+}
 .send:hover{background:var(--ember-2)}
 .send:focus-visible{outline:2px solid var(--ember-2);outline-offset:3px}
 .send svg{width:20px;height:20px}
