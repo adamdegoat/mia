@@ -598,12 +598,17 @@ async function initMic(){
   if(analyser) return true;
   try{
     micStream=await navigator.mediaDevices.getUserMedia({audio:true});
-    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    if(!audioCtx){ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }  // REUSE the playback context, never replace it
     const src=audioCtx.createMediaStreamSource(micStream);
     analyser=audioCtx.createAnalyser(); analyser.fftSize=64;
     src.connect(analyser); micData=new Uint8Array(analyser.frequencyBinCount);
     return true;
   }catch(e){ console.warn('mic denied / unavailable',e); return false; }
+}
+// Release the mic so the phone leaves call-mode and playback goes loud again.
+function releaseMic(){
+  try{ if(micStream) micStream.getTracks().forEach(t=>t.stop()); }catch(e){}
+  micStream=null; analyser=null; micData=null;   // re-init on the next hold (permission is remembered)
 }
 function pumpMic(){ if(mode==='listening'&&analyser){ analyser.getByteFrequencyData(micData); requestAnimationFrame(pumpMic);} }
 
@@ -623,12 +628,14 @@ function startListen(){
   heard='';
   mode='listening'; setState('Listening',true);
   showNow('You','...');
+  if(!analyser) initMic();      // open the mic lazily, only while holding to talk
   if(recog){ try{ recog.start(); recognizing=true; }catch(e){} }
   pumpMic();
 }
 function endListen(){
   if(mode!=='listening') return;
   if(recog&&recognizing){ try{ recog.stop(); }catch(e){} }
+  releaseMic();                 // let go of the mic so Mia plays loud again (esp. on phones)
   mode='idle'; setState('Ready',false);
   setTimeout(()=>{ if(heard) ask(heard); else nowEl.classList.add('dim'); },250);
 }
@@ -807,17 +814,20 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
 /* ============================================================================
    9) START  -  cold open
    ============================================================================ */
-el('begin').addEventListener('click',async()=>{
+el('begin').addEventListener('click',()=>{
   el('veil').classList.add('gone');
   started=true; t0=performance.now();
-  await initMic();
+  // Create + resume the audio context INSIDE this tap, and DON'T open the mic yet.
+  // On phones, asking for mic permission first "uses up" the tap and blocks the
+  // greeting audio; opening the mic also drops playback into quiet call-mode. So the
+  // mic is opened lazily on the first hold-to-talk instead (see startListen).
+  if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+  if(audioCtx&&audioCtx.state==='suspended') audioCtx.resume();
   // speak the opening line directly (instant, reliable, no model call).
   // NOTE: do NOT push it into `convo` — the API rejects a history that starts
   // with an assistant turn, which broke the first pill/question.
   showNow('Mia',OPENING); highlight('conversational');
-  // resume audio context on gesture
-  if(audioCtx&&audioCtx.state==='suspended') audioCtx.resume();
-  speakClip('audio/greeting.mp3', OPENING);   // pre-recorded greeting (free, instant)
+  speakClip('audio/greeting.mp3', OPENING);   // plays within the tap gesture -> sounds on mobile
 });
 
 /* browser support note */
