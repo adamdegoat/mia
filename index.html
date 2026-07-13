@@ -84,9 +84,11 @@ header{
   transition:border-color .2s ease,background .2s ease}
 .wa:hover{border-color:var(--ember);background:var(--ember-soft)}
 .wa svg{width:16px;height:16px;flex:none}
-.navlink{font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;
-  color:var(--muted);text-decoration:none;white-space:nowrap;transition:color .2s ease}
-.navlink:hover{color:var(--ember)}
+.navlink{display:inline-flex;align-items:center;gap:6px;font-family:"Space Mono",monospace;font-size:11px;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--muted);text-decoration:none;white-space:nowrap;
+  border:1px solid var(--line-2);border-radius:999px;padding:6px 12px;transition:color .2s ease,border-color .2s ease}
+.navlink:hover{color:var(--ember);border-color:var(--ember)}
+.navlink svg{width:12px;height:12px;flex:none}
 .tc{font-size:12px;letter-spacing:.14em;color:var(--muted)}
 .state{
   display:flex;align-items:center;gap:9px;
@@ -288,7 +290,7 @@ footer{
       <div class="sub">24/7 front desk</div>
     </div>
     <div class="hright">
-      <a class="navlink" href="services.html">Studio</a>
+      <a class="navlink" href="services.html">Studio <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
       <a class="wa" href="https://wa.me/6583219747" target="_blank" rel="noopener" aria-label="Message Adam on WhatsApp">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
         <span>WhatsApp Adam</span>
@@ -365,7 +367,7 @@ const CONFIG = {
   // Loudness. Live ElevenLabs is quieter so it gets more boost; the pre-recorded
   // clips are already normalized loud, so they get less. A peak limiter stops clipping.
   clipVolume: 1.3,      // pre-recorded greeting/pill boost (clips are already normalized loud)
-  targetRms: 0.16,      // LIVE audio is auto-normalized to this loudness so it matches the clips
+  targetRms: 0.20,      // LIVE audio is auto-normalized to this loudness so it matches the louder clips
   voiceVolume: 6,       // fallback live gain if the loudness measurement ever fails
 };
 
@@ -513,7 +515,7 @@ function startKaraoke(my){
   cancelAnimationFrame(kRAF);
   const tick=()=>{
     if(my!==speakToken||!ttsOn) return;                 // superseded / stopped -> self-cancel
-    const ct=ttsAudio?ttsAudio.currentTime:0, dur=ttsAudio?ttsAudio.duration:0;
+    const ct=curAudio?curAudio.currentTime:0, dur=curAudio?curAudio.duration:0;
     let i=kActive;
     if(kTimes&&kTimes.length){                           // exact per-word times (pre-recorded clips)
       while(i+1<kTimes.length && ct>=kTimes[i+1]) i++;
@@ -680,6 +682,7 @@ function pickVoice(){
 speechSynthesis.onvoiceschanged=pickVoice; pickVoice();
 
 let curUtter=null, ttsAudio=null, ttsSource=null, ttsAnalyser=null, ttsData=null, ttsOn=false, speakToken=0, ttsGain=null;
+let curAudio=null, liveAudio=null, liveSrc=null, liveGain=null;   // live path (boosted via Web Audio) vs clips (plain)
 
 // LIVE voice: generate Christine speech from arbitrary text (free-form spoken questions).
 function speak(text,done){
@@ -709,7 +712,7 @@ async function elevenSpeak(text,my,done){
     const rms=Math.sqrt(sum/Math.max(1,n));
     if(rms>0.00001){ gain=Math.min(16, Math.max(1.5, (CONFIG.targetRms||0.16)/rms)); }
   }catch(e){}
-  await voicePlay(URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'})), my, done, gain);
+  await liveVoicePlay(URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'})), my, done, gain);
 }
 
 // PRE-RECORDED voice: play a stored Christine clip (greeting + pills). Free, instant, consistent.
@@ -732,11 +735,37 @@ async function voicePlay(src, my, done, gain){
   // already loudness-matched, so they don't need the old gain/limiter graph. The
   // voiceprint animates synthetically while speaking (see draw()).
   if(!ttsAudio){ ttsAudio=new Audio(); ttsAudio.playsInline=true; ttsAudio.preload='auto'; }
-  ttsAudio.src=src; ttsAudio.volume=1;
+  ttsAudio.src=src; ttsAudio.volume=1; curAudio=ttsAudio;
   const finish=()=>{ if(my===speakToken){ ttsOn=false; mode='idle'; setState('Ready',false); done&&done(); } if(src&&src.indexOf('blob:')===0){ try{URL.revokeObjectURL(src);}catch(e){} } };
   ttsAudio.onended=finish; ttsAudio.onerror=finish;
   ttsOn=true; startKaraoke(my);
   await ttsAudio.play();
+}
+// LIVE answers get a boosted Web Audio path (gain + gentle limiter) so hold-to-talk is
+// as loud as the pre-recorded pills. Clips stay on a plain element (the iOS loudspeaker
+// fix). Live only runs where speech input works (desktop/Android), so routing it through
+// the AudioContext is safe; iOS never reaches here (no speech recognition).
+async function liveVoicePlay(src, my, done, gain){
+  if(my!==speakToken) return;
+  if(!audioCtx){ try{ audioCtx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+  if(!liveAudio){ liveAudio=new Audio(); liveAudio.playsInline=true; }
+  liveAudio.src=src; liveAudio.volume=1;
+  try{
+    if(audioCtx && !liveSrc){
+      liveSrc=audioCtx.createMediaElementSource(liveAudio);
+      liveGain=audioCtx.createGain();
+      const lim=audioCtx.createDynamicsCompressor();   // gentle: lift loudness, catch peaks, minimal pumping
+      lim.threshold.value=-1.5; lim.knee.value=8; lim.ratio.value=6; lim.attack.value=0.004; lim.release.value=0.18;
+      liveSrc.connect(liveGain); liveGain.connect(lim); lim.connect(audioCtx.destination);
+    }
+    if(liveGain) liveGain.gain.value = gain || 3;
+    if(audioCtx && audioCtx.state==='suspended') await audioCtx.resume();
+  }catch(e){}
+  curAudio=liveAudio;
+  const finish=()=>{ if(my===speakToken){ ttsOn=false; mode='idle'; setState('Ready',false); done&&done(); } if(src&&src.indexOf('blob:')===0){ try{URL.revokeObjectURL(src);}catch(e){} } };
+  liveAudio.onended=finish; liveAudio.onerror=finish;
+  ttsOn=true; startKaraoke(my);
+  await liveAudio.play();
 }
 function pumpTts(){ if(ttsOn && ttsAnalyser){ ttsAnalyser.getByteFrequencyData(ttsData); requestAnimationFrame(pumpTts); } }
 
@@ -756,6 +785,7 @@ function browserSpeak(text,done){
 function stopSpeaking(){
   speakToken++; ttsOn=false; cancelAnimationFrame(kRAF);
   if(ttsAudio){ try{ ttsAudio.pause(); ttsAudio.currentTime=0; }catch(e){} }
+  if(liveAudio){ try{ liveAudio.pause(); liveAudio.currentTime=0; }catch(e){} }
   if(speechSynthesis.speaking||curUtter){ curUtter=null; speechSynthesis.cancel(); }
 }
 
